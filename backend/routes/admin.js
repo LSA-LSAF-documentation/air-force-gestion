@@ -734,6 +734,10 @@ router.get('/aeronaves/:id', verificarToken, esAdmin, async (req, res) => {
 router.post('/aeronaves', verificarToken, esAdminOnly, async (req, res) => {
   try {
     const { id, modelo, nivel, tipo, estado, imagen_url } = req.body;
+    
+    console.log('📦 Datos recibidos para aeronave:', JSON.stringify(req.body));
+    console.log('🖼️ imagen_url recibida:', imagen_url);
+
     if (!id || !modelo || !nivel || !tipo) {
       return res.status(400).json({ error: 'Faltan campos requeridos' });
     }
