@@ -576,7 +576,9 @@ mostrarAlerta('Error al actualizar rol', 'error');
                             <div class="aeronaves-grid">
                                 ${aeronaves.map(a => {
                                     const tieneImagen = a.imagen_url && a.imagen_url.trim() !== '';
-                                    const imagenUrl = tieneImagen ? `http://localhost:3000${a.imagen_url}` : null;
+                                    const imagenUrl = tieneImagen 
+    ? (a.imagen_url.startsWith('http') ? a.imagen_url : `http://localhost:3000${a.imagen_url}`)
+    : null;
                                     const nivelIcono = getNivelIcono(a.nivel);
                                     const nivelColor = getNivelColor(a.nivel);
                                     
