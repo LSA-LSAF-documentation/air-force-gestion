@@ -362,6 +362,7 @@
     <script src="js/config.js"></script>
 
     <script>
+        const API_BASE_URL = 'https://air-force-gestion.onrender.com';
 
         // Mostrar alerta personalizada
         function mostrarAlerta(mensaje, tipo = 'info') {
@@ -536,7 +537,7 @@
     try {
         // Horas de vuelo
         try {
-            const horasResponse = await fetch(`/api/pilotos/${pilotoActual.id}/horas-vuelo`, {
+            const horasResponse = await fetch(`${API_BASE_URL}/api/pilotos/${pilotoActual.id}/horas-vuelo`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             
@@ -559,7 +560,7 @@
         
         // Total de vuelos
         try {
-            const librosResponse = await fetch('/api/libros/mis-vuelos', {
+            const librosResponse = await fetch(`${API_BASE_URL}/api/libros/mis-vuelos`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             
