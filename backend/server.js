@@ -160,4 +160,19 @@ process.on('SIGINT', () => {
   });
 });
 
+// ENDPOINT TEMPORAL PARA VER USUARIOS (solo para debug)
+app.get('/debug/usuarios', verificarToken, (req, res) => {
+  if (req.piloto.rol !== 'Admin') {
+    return res.status(403).json({ error: 'Acceso denegado' });
+  }
+  
+  db.all("SELECT id, nombre_completo, email, rol FROM pilotos", [], (err, rows) => {
+    if (err) {
+      res.status(500).json({ error: err.message });
+      return;
+    }
+    res.json({ usuarios: rows });
+  });
+});
+
 module.exports = app;
