@@ -588,14 +588,13 @@ router.post('/pilotos/:id/cambiar-grado', verificarToken, esAdminOSupervisor, as
   }
   
   // Obtener datos del piloto (incluyendo discord_id y nombre)
-  db.get("SELECT grado_code, discord_id, nombre_completo FROM pilotos WHERE id = ?", [id], (err, piloto) => {
-    if (err || !piloto) {
-      return res.status(404).json({ error: 'Piloto no encontrado' });
-    }
-    
-    const gradoActual = piloto.grado_code;
-    const discordId = piloto.discord_id;
-    const piloto_nombre = piloto.nombre_completo;
+  db.get("SELECT grado_code, discord_id, nombre_completo FROM pilotos WHERE id = ?", [id], (err, pilotoData) => {
+  if (err || !pilotoData) {
+    return res.status(404).json({ error: 'Piloto no encontrado' });
+  }
+  
+  const discordId = pilotoData.discord_id;
+  const piloto_nombre = pilotoData.nombre_completo;
     
     db.get("SELECT orden, nombre, code, discord_role_id FROM rangos WHERE code = ?", [gradoActual], (err, rangoActual) => {
       if (err || !rangoActual) {
