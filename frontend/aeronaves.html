@@ -487,7 +487,7 @@ function mostrarAlerta(mensaje, tipo = 'info') {
         }
         async function cambiarRol(id, nuevoRol) {
     const token = localStorage.getItem('token');
-    const res = await fetch(`http://localhost:3000/api/admin/pilotos/${id}/rol`, {
+    const res = await fetch(`/api/admin/pilotos/${id}/rol`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ rol: nuevoRol })
@@ -517,7 +517,7 @@ mostrarAlerta('Error al actualizar rol', 'error');
             container.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-pulse"></i><br>Cargando aeronaves...</div>';
             
             try {
-                const response = await fetch('http://localhost:3000/api/aeronaves', {
+                const response = await fetch('/api/aeronaves', {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 
@@ -698,7 +698,7 @@ function iniciarVerificacionPeriodica() {
         }
         
         try {
-            const response = await fetch(`http://localhost:3000/api/pilotos/${pilotoData.id}`, {
+            const response = await fetch(`/api/pilotos/${pilotoData.id}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             

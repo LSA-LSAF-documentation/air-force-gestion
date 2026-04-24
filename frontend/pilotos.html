@@ -536,7 +536,7 @@
     try {
         // Horas de vuelo
         try {
-            const horasResponse = await fetch(`http://localhost:3000/api/pilotos/${pilotoActual.id}/horas-vuelo`, {
+            const horasResponse = await fetch(`/api/pilotos/${pilotoActual.id}/horas-vuelo`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             
@@ -559,7 +559,7 @@
         
         // Total de vuelos
         try {
-            const librosResponse = await fetch('http://localhost:3000/api/libros/mis-vuelos', {
+            const librosResponse = await fetch('/api/libros/mis-vuelos', {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             
@@ -592,7 +592,7 @@
                 if (pilotoActual.rol === 'Admin') return;
                 
                 try {
-                    const response = await fetch(`http://localhost:3000/api/pilotos/${pilotoActual.id}`, {
+                    const response = await fetch(`/api/pilotos/${pilotoActual.id}`, {
                         headers: { 'Authorization': `Bearer ${token}` }
                     });
                     
@@ -624,7 +624,7 @@
             
             return new Promise((resolve, reject) => {
                 const xhr = new XMLHttpRequest();
-                xhr.open('POST', `http://localhost:3000/api/admin/upload/${endpoint}/${id}`, true);
+                xhr.open('POST', `/api/admin/upload/${endpoint}/${id}`, true);
                 xhr.setRequestHeader('Authorization', `Bearer ${token}`);
                 
                 xhr.upload.onprogress = function(e) {
@@ -661,7 +661,7 @@
             const token = localStorage.getItem('token');
             const id = pilotoActual.id;
             
-            const res = await fetch(`http://localhost:3000/api/admin/pilotos/${id}`, {
+            const res = await fetch(`/api/admin/pilotos/${id}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const data = await res.json();
@@ -732,7 +732,7 @@
                 foto_url: document.getElementById('edit_piloto_foto').value || null
             };
             
-            const res = await fetch(`http://localhost:3000/api/admin/pilotos/${id}`, {
+            const res = await fetch(`/api/admin/pilotos/${id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify(data)

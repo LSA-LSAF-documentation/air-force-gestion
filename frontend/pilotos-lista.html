@@ -548,7 +548,7 @@ function mostrarAlerta(mensaje, tipo = 'info') {
 
         async function cambiarRol(id, nuevoRol) {
     const token = localStorage.getItem('token');
-    const res = await fetch(`http://localhost:3000/api/admin/pilotos/${id}/rol`, {
+    const res = await fetch(`/api/admin/pilotos/${id}/rol`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ rol: nuevoRol })
@@ -572,7 +572,7 @@ mostrarAlerta('Error al actualizar rol', 'error');
         async function cargarRangos() {
             try {
                 const token = localStorage.getItem('token');
-                const response = await fetch('http://localhost:3000/api/admin/rangos-public', {
+                const response = await fetch('/api/admin/rangos-public', {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 if (response.ok) {
@@ -601,7 +601,7 @@ mostrarAlerta('Error al actualizar rol', 'error');
             container.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-pulse"></i><br>Cargando pilotos...</div>';
             
             try {
-                const response = await fetch('http://localhost:3000/api/pilotos', {
+                const response = await fetch('/api/pilotos', {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 
@@ -676,7 +676,7 @@ mostrarAlerta('Error al actualizar rol', 'error');
     const token = localStorage.getItem('token');
     
     try {
-        const response = await fetch(`http://localhost:3000/api/pilotos/${pilotoId}/horas-vuelo`, {
+        const response = await fetch(`/api/pilotos/${pilotoId}/horas-vuelo`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -732,7 +732,7 @@ mostrarAlerta('Error al actualizar rol', 'error');
     }
             
             try {
-                const response = await fetch(`http://localhost:3000/api/admin/pilotos/${pilotoId}/certificaciones`, {
+                const response = await fetch(`/api/admin/pilotos/${pilotoId}/certificaciones`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 
@@ -765,14 +765,14 @@ mostrarAlerta('Error al actualizar rol', 'error');
             
             try {
                 // Primero cargar los rangos con logos
-                const rangosResponse = await fetch('http://localhost:3000/api/admin/rangos-public', {
+                const rangosResponse = await fetch('/api/admin/rangos-public', {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 const rangosData = await rangosResponse.json();
                 const rangosConLogo = rangosData.ranks || [];
                 
                 // Luego cargar el historial
-                const response = await fetch(`http://localhost:3000/api/pilotos/${pilotoId}/historial-ascensos`, {
+                const response = await fetch(`/api/pilotos/${pilotoId}/historial-ascensos`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 
@@ -959,7 +959,7 @@ function iniciarVerificacionPeriodica() {
         }
         
         try {
-            const response = await fetch(`http://localhost:3000/api/pilotos/${pilotoData.id}`, {
+            const response = await fetch(`/api/pilotos/${pilotoData.id}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             

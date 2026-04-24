@@ -530,7 +530,7 @@ function mostrarAlerta(mensaje, tipo = 'info') {
 }
         async function cambiarRol(id, nuevoRol) {
     const token = localStorage.getItem('token');
-    const res = await fetch(`http://localhost:3000/api/admin/pilotos/${id}/rol`, {
+    const res = await fetch(`/api/admin/pilotos/${id}/rol`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ rol: nuevoRol })
@@ -556,7 +556,7 @@ function mostrarAlerta(mensaje, tipo = 'info') {
             const pilotoId = pilotoActual.id;
             
             try {
-                const response = await fetch(`http://localhost:3000/api/admin/pilotos/${pilotoId}/aeronaves-disponibles`, {
+                const response = await fetch(`/api/admin/pilotos/${pilotoId}/aeronaves-disponibles`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 const data = await response.json();
@@ -585,7 +585,7 @@ function mostrarAlerta(mensaje, tipo = 'info') {
             const filtro = document.getElementById('filtro').value;
             const esInstructorOAdmin = pilotoActual.rol === 'Instructor' || pilotoActual.rol === 'Admin' || pilotoActual.rol === 'Supervisor';
             
-            let url = 'http://localhost:3000/api/solicitudes/';
+            let url = '/api/solicitudes/';
             if (pilotoActual.rol === 'Piloto') {
     url += 'mis-solicitudes';
 } else if (filtro === 'mis-solicitudes') {
@@ -698,7 +698,7 @@ function mostrarAlerta(mensaje, tipo = 'info') {
             const token = localStorage.getItem('token');
             
             try {
-                const response = await fetch(`http://localhost:3000/api/solicitudes/${id}`, {
+                const response = await fetch(`/api/solicitudes/${id}`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
@@ -729,7 +729,7 @@ function mostrarAlerta(mensaje, tipo = 'info') {
     try {
         console.log('🚀 Ejecutando actualización de solicitud...');
 
-        const updateResponse = await fetch(`http://localhost:3000/api/solicitudes/${solicitudId}`, {
+        const updateResponse = await fetch(`/api/solicitudes/${solicitudId}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -805,7 +805,7 @@ function mostrarAlerta(mensaje, tipo = 'info') {
             };
             
             try {
-                const response = await fetch('http://localhost:3000/api/solicitudes/', {
+                const response = await fetch('/api/solicitudes/', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -897,7 +897,7 @@ function iniciarVerificacionPeriodica() {
         }
         
         try {
-            const response = await fetch(`http://localhost:3000/api/pilotos/${pilotoData.id}`, {
+            const response = await fetch(`/api/pilotos/${pilotoData.id}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             
