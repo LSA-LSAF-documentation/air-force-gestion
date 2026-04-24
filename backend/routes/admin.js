@@ -284,7 +284,7 @@ router.post('/pilotos', verificarToken, esAdminOSupervisor, async (req, res) => 
     
     await pool.query(
       `INSERT INTO pilotos (id, nombre_completo, grado_code, email, password_hash, tipo_sangre, nacionalidad, rol, foto_url, activo) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, true)`,
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 1)`,
       [id, nombre_completo, grado_code, email, password_hash, tipo_sangre || null, nacionalidad || 'LS', rol || 'Piloto', foto_url || null]
     );
     
