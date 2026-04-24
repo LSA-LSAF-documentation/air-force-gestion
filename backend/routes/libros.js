@@ -7,9 +7,9 @@ const { enviarWebhookLibro, getNextLibroId } = require('../utils/webhooks');
 // Obtener todos los libros de vuelo
 router.get('/', verificarToken, async (req, res) => {
   try {
-    if (req.piloto.rol === 'Piloto') {
-      return res.status(403).json({ error: 'Acceso denegado' });
-    }
+    //if (req.piloto.rol === 'Piloto') {
+    //  return res.status(403).json({ error: 'Acceso denegado' });
+    //}
     
     const query = `
       SELECT lv.*, 

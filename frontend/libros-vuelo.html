@@ -572,6 +572,7 @@
 <script src="js/config.js"></script>
 
     <script>
+        const API_BASE_URL = 'https://air-force-gestion.onrender.com';
         let pilotoActual = null;
         let imagenesSeleccionadas = [];
         
@@ -708,7 +709,7 @@ mostrarAlerta('Error al actualizar rol', 'error');
             const esInstructor = pilotoActual.rol === 'Instructor';
             const puedeVerDetalle = esAdmin || esInstructor;
             
-            let url = '/api/libros/';
+            let url = `${API_BASE_URL}/api/libros/`;
             if (filtro === 'mis-vuelos') {
                 url += 'mis-vuelos';
             }
