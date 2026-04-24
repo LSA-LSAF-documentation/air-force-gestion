@@ -1,0 +1,1985 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - LSAF Air Force</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="css/airforce-style.css">
+    <style>
+        .admin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card-admin {
+            background: linear-gradient(135deg, var(--af-navy), var(--af-deep-blue));
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 36px;
+            font-weight: bold;
+        }
+        
+        .admin-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+            border-bottom: 2px solid var(--af-gray);
+            padding-bottom: 10px;
+        }
+        
+        .tab-btn {
+            padding: 10px 25px;
+            background: var(--af-gray);
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+        
+        .tab-btn:hover {
+            background: var(--af-silver);
+        }
+        
+        .tab-btn.active {
+            background: var(--af-sky);
+            color: white;
+        }
+        
+        .tab-pane {
+            display: none;
+        }
+        
+        .tab-pane.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .table-container {
+            background: white;
+            border-radius: 15px;
+            overflow-x: auto;
+            box-shadow: var(--shadow-md);
+            margin-top: 20px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th {
+            background: var(--af-navy);
+            color: white;
+            padding: 15px;
+            text-align: left;
+        }
+        
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid var(--af-gray);
+        }
+        
+        tr:hover {
+            background: var(--af-gray);
+        }
+        
+        .btn-small {
+            padding: 5px 12px;
+            margin: 0 3px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+        
+        .btn-small:hover {
+            transform: translateY(-1px);
+        }
+        
+        .btn-primary-small {
+            background: var(--af-sky);
+            color: white;
+        }
+        
+        .btn-danger-small {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .btn-success-small {
+            background: #28a745;
+            color: white;
+        }
+        
+        .btn-warning-small {
+            background: #ffc107;
+            color: #333;
+        }
+        
+        .btn-agregar {
+            background: var(--af-success);
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal-content {
+            background: white;
+            max-width: 650px;
+            width: 90%;
+            padding: 30px;
+            border-radius: 20px;
+            animation: slideUp 0.3s ease;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .close-modal {
+            font-size: 28px;
+            cursor: pointer;
+            color: #999;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--af-navy);
+        }
+        
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid var(--af-gray);
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: var(--af-sky);
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        
+        .btn-guardar {
+            background: var(--af-sky);
+            color: white;
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+        
+        .btn-guardar:hover {
+            background: var(--af-navy);
+            transform: translateY(-1px);
+        }
+        
+        .rol-select, .rango-select {
+            padding: 5px;
+            border-radius: 5px;
+            border: 1px solid var(--af-gray);
+        }
+        
+        .badge-rol {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 15px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+        
+        .rol-admin { background: #dc3545; color: white; }
+        .rol-instructor { background: #ffc107; color: #333; }
+        .rol-piloto { background: #28a745; color: white; }
+        
+        .foto-preview {
+            margin-top: 10px;
+            display: none;
+        }
+        
+        .foto-preview img {
+            max-width: 100px;
+            max-height: 100px;
+            border-radius: 10px;
+            border: 2px solid var(--af-gray);
+        }
+        
+        .help-text {
+            font-size: 11px;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        .upload-area {
+            border: 2px dashed var(--af-gray);
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: all 0.2s;
+            min-height: 100px;
+        }
+        
+        .upload-area:hover {
+            border-color: var(--af-sky);
+            background: var(--af-gray);
+        }
+        
+        progress {
+            width: 100%;
+            height: 8px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        
+        .edit-section {
+            background: var(--af-gray);
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+        
+        .edit-section h4 {
+            margin-bottom: 15px;
+            color: var(--af-navy);
+        }
+        
+        .filtro-inactivos {
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .logo-preview {
+            width: 40px;
+            height: 40px;
+            object-fit: cover;
+            border-radius: 5px;
+        }
+        
+        .rango-logo-tabla {
+            width: 40px;
+            height: 40px;
+            object-fit: cover;
+            border-radius: 50%;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- BARRA LATERAL -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-brand">
+    <img src="" alt="Logo" id="sidebarLogo">
+    <h3 id="sidebarNombre"></h3>
+    <p id="sidebarSubtitulo"></p>
+    <div class="logos-container">
+        <img src="" id="logo1">
+        <img src="" id="logo2">
+    </div>
+</div>
+        
+        <div class="sidebar-nav">
+            <div class="nav-item"><a href="pilotos.html" class="nav-link"><i class="fas fa-tachometer-alt"></i><span>Dashboard</span></a></div>
+            <div class="nav-item"><a href="pilotos-lista.html" class="nav-link"><i class="fas fa-users"></i><span>Pilotos</span></a></div>
+            <div class="nav-item"><a href="aeronaves.html" class="nav-link"><i class="fas fa-plane"></i><span>Aeronaves</span></a></div>
+            <div class="nav-item"><a href="libros-vuelo.html" class="nav-link"><i class="fas fa-book"></i><span>Libros de Vuelo</span></a></div>
+            <div class="nav-item"><a href="solicitudes.html" class="nav-link"><i class="fas fa-clipboard-list"></i><span>Solicitudes</span></a></div>
+            <div class="nav-item"><a href="admin.html" class="nav-link active"><i class="fas fa-shield-alt"></i><span>Admin Panel</span></a></div>
+        </div>
+        
+        <div class="sidebar-profile">
+            <div class="profile-info" id="profileBtn">
+                <div class="profile-avatar" id="avatarInicial">
+                    <img id="avatarImg" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: none;">
+                    <span id="avatarTexto">AD</span>
+                </div>
+                <div class="profile-details">
+                    <div class="profile-name" id="profileName">Admin</div>
+                    <div class="profile-rank" id="profileRank">Administrador</div>
+                </div>
+                <i class="fas fa-chevron-up" style="font-size: 12px;"></i>
+            </div>
+            <div class="profile-dropdown" id="profileDropdown">
+                <a href="#" class="dropdown-item" id="miPerfilBtn">
+                    <i class="fas fa-user-edit"></i>
+                    <span>Mi Perfil</span>
+                </a>
+                <a href="#" class="dropdown-item" id="cerrarSesionBtn">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Cerrar Sesión</span>
+                </a>
+            </div>
+        </div>
+    </aside>
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <main class="main-content" id="mainContent">
+        <div class="top-bar">
+            <button class="menu-toggle" id="menuToggle"><i class="fas fa-bars"></i></button>
+            <div class="breadcrumbs">
+                <a href="pilotos.html">Inicio</a>
+                <span>/</span>
+                <a href="admin.html">Admin Panel</a>
+                <span>/</span>
+                <span>Gestión</span>
+            </div>
+        </div>
+        
+        <div class="page-container">
+            <div class="admin-header">
+                <h1><i class="fas fa-shield-alt"></i> Panel de Administración</h1>
+                <div style="background: #dc3545; color: white; padding: 5px 15px; border-radius: 20px;">
+                    <i class="fas fa-crown"></i> Acceso Administrador
+                </div>
+            </div>
+            
+            <div id="statsContainer" class="stats-grid"></div>
+            
+            <div class="admin-tabs">
+                <button class="tab-btn active" onclick="showTab('pilotos')"><i class="fas fa-users"></i> Pilotos</button>
+                <button class="tab-btn" onclick="showTab('aeronaves')"><i class="fas fa-plane"></i> Aeronaves</button>
+                <button class="tab-btn" onclick="showTab('rangos')"><i class="fas fa-arrow-up"></i> Rangos</button>
+            </div>
+            
+            <!-- Tabla de Pilotos -->
+            <div id="tab-pilotos" class="tab-pane active">
+                <button class="btn-agregar" onclick="abrirModalPiloto()"><i class="fas fa-plus"></i> Nuevo Piloto</button>
+                <div class="filtro-inactivos">
+                    <input type="checkbox" id="incluirInactivos" onchange="cargarPilotos()">
+                    <label for="incluirInactivos">Mostrar pilotos archivados</label>
+                </div>
+                <div class="table-container">
+                    <table id="tablaPilotos">
+                        <thead>
+                            <tr><th>ID</th><th>Nombre</th><th>Rango</th><th>Email</th><th>Estado/Rol</th><th>Acciones</th></tr>
+                        </thead>
+                        <tbody><tr><td colspan="6" style="text-align: center;">Cargando...</tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Tabla de Aeronaves -->
+            <div id="tab-aeronaves" class="tab-pane">
+                <button class="btn-agregar" onclick="abrirModalAeronave()"><i class="fas fa-plus"></i> Nueva Aeronave</button>
+                <div class="table-container">
+                    <table id="tablaAeronaves">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Modelo</th>
+                                <th>Nivel</th>
+                                <th>Tipo</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody><tr><td colspan="6" style="text-align: center;">Cargando...</tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Tabla de Rangos -->
+            <div id="tab-rangos" class="tab-pane">
+                <button class="btn-agregar" onclick="agregarRango()"><i class="fas fa-plus"></i> Nuevo Rango</button>
+                <div class="table-container">
+                    <table id="tablaRangos">
+                        <thead>
+                            <th>Logo</th><th>Código</th><th>Nombre</th><th>Orden</th><th>Rol Discord</th><th>Acciones</th>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+                <button class="btn-guardar" onclick="guardarRangos()" style="margin-top: 20px; width: auto; padding: 10px 20px;">💾 Guardar Cambios</button>
+            </div>
+        </div>
+    </main>
+
+    <!-- MODAL PILOTO (CREACIÓN) -->
+    <div id="modalPiloto" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-user-plus"></i> Nuevo Piloto</h2>
+                <span class="close-modal" onclick="cerrarModalPiloto()">&times;</span>
+            </div>
+            <form id="formPiloto">
+                <div class="form-group">
+                    <label>ID (Código) *</label>
+                    <input type="text" id="piloto_id" required readonly style="background:#f0f0f0">
+                </div>
+                <div class="form-group">
+                    <label>Nombre Completo *</label>
+                    <input type="text" id="piloto_nombre" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Rango/Grado *</label>
+                        <select id="piloto_grado" required><option>Cargando...</option></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Tipo de Sangre</label>
+                        <input type="text" id="piloto_sangre" placeholder="Ej: O+">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Email *</label>
+                    <input type="email" id="piloto_email" required>
+                </div>
+                <div class="form-group">
+                    <label>Contraseña *</label>
+                    <input type="password" id="piloto_password" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Nacionalidad</label>
+                        <input type="text" id="piloto_nacionalidad" value="Los Santos">
+                    </div>
+                    <div class="form-group">
+    <label><i class="fab fa-discord"></i> ID de Discord</label>
+    <input type="text" id="piloto_discord_id" placeholder="Ej: 123456789012345678">
+    <div class="help-text">Para sincronizar rango automáticamente con Discord</div>
+</div>
+                    <div class="form-group">
+                        <label>Rol</label>
+                        <select id="piloto_rol">
+    <option value="Piloto">👨‍✈️ Piloto</option>
+    <option value="Instructor">📚 Instructor</option>
+    <option value="Supervisor">👁️ Supervisor</option>
+    <option value="Admin">👑 Admin</option>
+</select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>URL de Foto (opcional)</label>
+                    <input type="url" id="piloto_foto" placeholder="https://...">
+                    <div id="fotoPreview" class="foto-preview">
+                        <img id="previewImg" src="" alt="Vista previa">
+                    </div>
+                </div>
+                <button type="submit" class="btn-guardar">Crear Piloto</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL EDITAR PILOTO -->
+    <div id="modalEditarPiloto" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-edit"></i> Editar Piloto</h2>
+                <span class="close-modal" onclick="cerrarModalEditarPiloto()">&times;</span>
+            </div>
+            <form id="formEditarPiloto">
+                <input type="hidden" id="edit_piloto_id">
+                <div class="form-group">
+                    <label>Nombre Completo</label>
+                    <input type="text" id="edit_piloto_nombre" required>
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="edit_piloto_email" required>
+                </div>
+                <div class="form-group">
+    <label><i class="fab fa-discord"></i> ID de Discord</label>
+    <input type="text" id="edit_piloto_discord_id" placeholder="Ej: 123456789012345678">
+</div>
+                <div class="form-group">
+                    <label>URL de Foto</label>
+                    <input type="url" id="edit_piloto_foto" placeholder="https://...">
+                </div>
+                
+                <div class="edit-section">
+                    <h4><i class="fas fa-upload"></i> Subir nueva foto desde PC</h4>
+                    <div class="upload-area" id="uploadAreaEditarPiloto">
+                        <i class="fas fa-cloud-upload-alt" style="font-size: 24px;"></i>
+                        <p>Haz clic o arrastra una imagen aquí</p>
+                        <input type="file" id="fotoArchivoEditarPiloto" accept="image/*" style="display: none;">
+                    </div>
+                    <div id="uploadPreviewEditarPiloto" style="margin-top: 10px; display: none;">
+                        <img id="uploadPreviewImgEditarPiloto" style="max-width: 100px; border-radius: 10px;">
+                        <progress id="uploadProgressEditarPiloto" value="0" max="100"></progress>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn-guardar">Guardar Cambios</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL AERONAVE (CREACIÓN) -->
+    <div id="modalAeronave" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-plus-circle"></i> Nueva Aeronave</h2>
+                <span class="close-modal" onclick="cerrarModalAeronave()">&times;</span>
+            </div>
+            <form id="formAeronave">
+                <div class="form-group"><label>ID (Matrícula) *</label><input type="text" id="aeronave_id" required placeholder="Ej: FA-01"></div>
+                <div class="form-group"><label>Modelo *</label><input type="text" id="aeronave_modelo" required placeholder="Ej: F-16 Fighting Falcon"></div>
+                <div class="form-group">
+                    <label>Nivel *</label>
+                    <select id="aeronave_nivel" required>
+                        <option value="">Selecciona un nivel</option>
+                        <option value="Básico">🟢 Básico</option>
+                        <option value="Intermedio">🟡 Intermedio</option>
+                        <option value="Avanzado">🔴 Avanzado</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Tipo *</label>
+                    <select id="aeronave_tipo" required>
+                        <option value="">Selecciona un tipo</option>
+                        <option value="Ala fija">✈️ Ala fija</option>
+                        <option value="Ala Rotatoria">🚁 Ala Rotatoria</option>
+                    </select>
+                </div>
+                <div class="form-group"><label>Estado</label><select id="aeronave_estado"><option>Operativa</option><option>Mantenimiento</option></select></div>
+                <div class="form-group"><label>URL de Imagen</label><input type="url" id="aeronave_imagen" placeholder="https://..."></div>
+                <button type="submit" class="btn-guardar">Agregar Aeronave</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL EDITAR AERONAVE -->
+    <div id="modalEditarAeronave" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-edit"></i> Editar Aeronave</h2>
+                <span class="close-modal" onclick="cerrarModalEditarAeronave()">&times;</span>
+            </div>
+            <form id="formEditarAeronave">
+                <input type="hidden" id="edit_aeronave_id">
+                <div class="form-group"><label>Modelo</label><input type="text" id="edit_aeronave_modelo" required></div>
+                <div class="form-group">
+                    <label>Nivel</label>
+                    <select id="edit_aeronave_nivel" required>
+                        <option value="Básico">🟢 Básico</option>
+                        <option value="Intermedio">🟡 Intermedio</option>
+                        <option value="Avanzado">🔴 Avanzado</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Tipo</label>
+                    <select id="edit_aeronave_tipo" required>
+                        <option value="Ala fija">✈️ Ala fija</option>
+                        <option value="Ala Rotatoria">🚁 Ala Rotatoria</option>
+                    </select>
+                </div>
+                <div class="form-group"><label>Estado</label><select id="edit_aeronave_estado"><option>Operativa</option><option>Mantenimiento</option></select></div>
+                <div class="form-group"><label>URL de Imagen</label><input type="url" id="edit_aeronave_imagen" placeholder="https://..."></div>
+                
+                <div class="edit-section">
+                    <h4><i class="fas fa-upload"></i> Subir nueva imagen desde PC</h4>
+                    <div class="upload-area" id="uploadAreaEditarAeronave">
+                        <i class="fas fa-cloud-upload-alt" style="font-size: 24px;"></i>
+                        <p>Haz clic o arrastra una imagen aquí</p>
+                        <input type="file" id="fotoArchivoEditarAeronave" accept="image/*" style="display: none;">
+                    </div>
+                    <div id="uploadPreviewEditarAeronave" style="margin-top: 10px; display: none;">
+                        <img id="uploadPreviewImgEditarAeronave" style="max-width: 100px; border-radius: 10px;">
+                        <progress id="uploadProgressEditarAeronave" value="0" max="100"></progress>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn-guardar">Guardar Cambios</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL CAMBIAR CONTRASEÑA -->
+    <div id="modalPassword" class="modal">
+        <div class="modal-content">
+            <div class="modal-header"><h2><i class="fas fa-key"></i> Cambiar Contraseña</h2><span class="close-modal" onclick="cerrarModalPassword()">&times;</span></div>
+            <form id="formPassword">
+                <div class="form-group"><label>Nueva Contraseña</label><input type="password" id="newPassword" required minlength="4"></div>
+                <button type="submit" class="btn-guardar">Actualizar</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL DE SESIÓN EXPIRADA -->
+<div id="modalSesionExpirada" class="modal" style="display: none; z-index: 10000;">
+    <div class="modal-content" style="max-width: 400px; text-align: center;">
+        <div class="modal-header">
+            <h2><i class="fas fa-exclamation-triangle" style="color: #ffc107;"></i> Sesión Caducada</h2>
+        </div>
+        <div style="padding: 20px;">
+            <p>Tu cuenta ha sido desactivada o tu rol ha sido modificado por un administrador.</p>
+            <p>Debes <strong>volver a iniciar sesión</strong> para continuar.</p>
+            <p style="font-size: 12px; color: #999; margin-top: 15px;">Esta acción es obligatoria.</p>
+        </div>
+        <button id="btnCerrarSesionForzada" class="btn-guardar" style="background: #dc3545;">
+            <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
+        </button>
+    </div>
+</div>
+
+<!-- MODAL DE ALERTA PERSONALIZADO -->
+<div id="modalAlerta" class="modal" style="display: none; z-index: 10000;">
+    <div class="modal-content" style="max-width: 400px; text-align: center;">
+        <div class="modal-header">
+            <h2 id="alertaTitulo"><i class="fas fa-info-circle"></i> Aviso</h2>
+        </div>
+        <div style="padding: 20px;">
+            <p id="alertaMensaje">Mensaje de prueba</p>
+        </div>
+        <button id="btnCerrarAlerta" class="btn-guardar" style="background: var(--af-sky);">
+            <i class="fas fa-check"></i> Aceptar
+        </button>
+    </div>
+</div>
+<script src="js/config.js"></script>
+
+    <script>
+        let pilotoActual = null;
+        let pilotoIdSeleccionado = null;
+        let listaRangos = [];
+        let rangosEditables = [];
+        
+
+        // Mostrar alerta personalizada
+function mostrarAlerta(mensaje, tipo = 'info') {
+    const modal = document.getElementById('modalAlerta');
+    const titulo = document.getElementById('alertaTitulo');
+    const mensajeEl = document.getElementById('alertaMensaje');
+    const btn = document.getElementById('btnCerrarAlerta');
+    
+    if (tipo === 'success') {
+        titulo.innerHTML = '<i class="fas fa-check-circle"></i> Éxito';
+        btn.style.background = '#28a745';
+    } else if (tipo === 'error') {
+        titulo.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Error';
+        btn.style.background = '#dc3545';
+    } else if (tipo === 'warning') {
+        titulo.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Advertencia';
+        btn.style.background = '#ffc107';
+        btn.style.color = '#333';
+    } else {
+        titulo.innerHTML = '<i class="fas fa-info-circle"></i> Aviso';
+        btn.style.background = 'var(--af-sky)';
+        btn.style.color = 'white';
+    }
+    
+    mensajeEl.textContent = mensaje;
+    modal.style.display = 'flex';
+    
+    // Cerrar al hacer clic en el botón
+    btn.onclick = function() {
+        modal.style.display = 'none';
+    };
+    
+    // No cerrar al hacer clic fuera
+    modal.onclick = function(event) {
+        if (event.target === modal) return;
+    };
+}
+        
+        // ============================================
+        // VERIFICAR ADMIN
+        // ============================================
+        
+        // Mostrar modal de sesión expirada (no se puede cerrar)
+function mostrarModalSesionExpirada() {
+    const modal = document.getElementById('modalSesionExpirada');
+    if (modal) {
+        modal.style.display = 'flex';
+        modal.onclick = function(event) {
+            if (event.target === modal) return;
+        };
+        const btnCerrar = document.getElementById('btnCerrarSesionForzada');
+        if (btnCerrar) {
+            btnCerrar.onclick = function() {
+                localStorage.clear();
+                window.location.href = 'index.html';
+            };
+        }
+    } else {
+mostrarAlerta('Tu rol ha cambiado. Debes volver a iniciar sesión.', 'warning');        localStorage.clear();
+        window.location.href = 'index.html';
+    }
+}
+
+// Verificar rol periódicamente
+async function verificarRolPeriodicamente() {
+    const token = localStorage.getItem('token');
+    const piloto = localStorage.getItem('piloto');
+    if (!token || !piloto) return;
+    
+    const pilotoData = JSON.parse(piloto);
+    
+    // Si es Admin, no verificar (para evitar problemas)
+    if (pilotoData.rol === 'Admin') {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`http://localhost:3000/api/pilotos/${pilotoData.id}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            const rolEnBD = data.piloto?.rol;
+            const activoEnBD = data.piloto?.activo;
+            
+            // Verificar si fue archivado
+            if (activoEnBD === 0) {
+                console.log('⚠️ Usuario archivado! Mostrando modal...');
+                mostrarModalSesionExpirada('Su cuenta ha sido desactivada. Ya no pertenece a la Fuerza Aérea de LSAF.');
+                return;
+            }
+            
+            // Verificar cambio de rol
+            if (rolEnBD && rolEnBD !== pilotoData.rol) {
+                console.log('⚠️ Rol cambiado! Mostrando modal...');
+                mostrarModalSesionExpirada('Su rol ha sido modificado. Debe volver a iniciar sesión.');
+            }
+        }
+    } catch (error) {
+        console.error('Error al verificar:', error);
+    }
+}
+
+// Verificar rol al cargar la página
+async function verificarRolAlCargar(token, pilotoId, rolActual) {
+    try {
+        const response = await fetch(`http://localhost:3000/api/pilotos/${pilotoId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            const rolEnBD = data.piloto.rol;
+            
+            console.log('Verificando rol al cargar - Local:', rolActual, 'BD:', rolEnBD);
+            
+            // Solo mostrar modal si los roles son diferentes
+            if (rolEnBD !== rolActual) {
+                console.log('⚠️ Rol cambiado! Mostrando modal...');
+                mostrarModalSesionExpirada();
+            } else {
+                console.log('✅ Rol coincide, acceso permitido');
+            }
+        }
+    } catch (error) {
+        console.error('Error al verificar rol:', error);
+    }
+}
+
+   function verificarAcceso() {
+    const token = localStorage.getItem('token');
+    const piloto = localStorage.getItem('piloto');
+    
+    if (!token || !piloto) {
+        window.location.href = 'index.html';
+        return false;
+    }
+    
+    pilotoActual = JSON.parse(piloto);
+    
+    // Verificar si es Admin o Supervisor
+    if (pilotoActual.rol !== 'Admin' && pilotoActual.rol !== 'Supervisor') {
+        window.location.href = 'pilotos.html';
+        return false;
+    }
+    
+    document.getElementById('profileName').textContent = pilotoActual.nombre;
+    document.getElementById('profileRank').textContent = pilotoActual.grado;
+    
+    const iniciales = pilotoActual.nombre.split(' ').map(n => n[0]).join('');
+    const avatarImg = document.getElementById('avatarImg');
+    const avatarTexto = document.getElementById('avatarTexto');
+    
+    if (pilotoActual.foto_url && pilotoActual.foto_url !== '') {
+        let fotoUrl = pilotoActual.foto_url;
+        if (!fotoUrl.startsWith('http')) {
+            fotoUrl = `http://localhost:3000${fotoUrl}`;
+        }
+        avatarImg.style.display = 'block';
+        avatarTexto.style.display = 'none';
+        avatarImg.src = fotoUrl;
+    } else {
+        avatarImg.style.display = 'none';
+        avatarTexto.style.display = 'block';
+        avatarTexto.textContent = iniciales.substring(0, 2);
+    }
+    
+    // Ocultar pestañas según el rol
+    if (pilotoActual.rol === 'Supervisor') {
+        const tabAeronaves = document.querySelector('.tab-btn[onclick="showTab(\'aeronaves\')"]');
+        const tabRangos = document.querySelector('.tab-btn[onclick="showTab(\'rangos\')"]');
+        if (tabAeronaves) tabAeronaves.style.display = 'none';
+        if (tabRangos) tabRangos.style.display = 'none';
+    }
+    
+    // ============================================
+    // CONFIGURACIÓN DE LOGOS Y TÍTULOS DE LA ORGANIZACIÓN
+    // ============================================
+    
+    // Configurar logos de la sidebar
+    if (document.getElementById('sidebarLogo')) {
+        document.getElementById('sidebarLogo').src = ORG_CONFIG.logos.principal;
+        document.getElementById('sidebarNombre').textContent = ORG_CONFIG.nombre;
+        document.getElementById('sidebarSubtitulo').textContent = ORG_CONFIG.textos.sistema;
+        document.getElementById('logo1').src = ORG_CONFIG.logos.secundario1;
+        document.getElementById('logo2').src = ORG_CONFIG.logos.secundario2;
+    }
+    
+    // Configurar título de la página
+    document.title = `Admin Panel - ${ORG_CONFIG.nombre}`;
+    
+    // Activar la pestaña de pilotos manualmente
+    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+    document.getElementById('tab-pilotos').classList.add('active');
+    
+    return true;
+}
+        
+        // ============================================
+        // GENERAR ID
+        // ============================================
+        
+        function generarID() {
+            const numero = Math.floor(Math.random() * 9000) + 1000;
+            return `AF${numero}`;
+        }
+        
+        // ============================================
+        // CARGAR RANGOS
+        // ============================================
+        
+        async function cargarRangos() {
+    const token = localStorage.getItem('token');
+    try {
+        // Usar el endpoint público que funciona para Admin y Supervisor
+        const response = await fetch('http://localhost:3000/api/admin/rangos-public', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await response.json();
+        listaRangos = data.ranks || [];
+        return listaRangos;
+    } catch (error) {
+        console.error('Error al cargar rangos:', error);
+        return [];
+    }
+}
+        
+        async function cargarRangosSelect() {
+            const rangos = await cargarRangos();
+            const select = document.getElementById('piloto_grado');
+            if (select && rangos.length > 0) {
+                select.innerHTML = '<option value="">Selecciona un rango</option>';
+                rangos.forEach(rango => {
+                    select.innerHTML += `<option value="${rango.code}">${rango.code} - ${rango.nombre}</option>`;
+                });
+            }
+        }
+        
+        // ============================================
+        // SUBIR IMAGEN
+        // ============================================
+        
+        async function subirImagen(endpoint, file, id, previewElement, progressElement, inputUrlElement) {
+            const formData = new FormData();
+            formData.append('imagen', file);
+            const token = localStorage.getItem('token');
+            
+            return new Promise((resolve, reject) => {
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', `http://localhost:3000/api/admin/upload/${endpoint}/${id}`, true);
+                xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+                
+                xhr.upload.onprogress = function(e) {
+                    if (e.lengthComputable && progressElement) {
+                        progressElement.value = (e.loaded / e.total) * 100;
+                    }
+                };
+                
+                xhr.onload = function() {
+                    if (xhr.status === 200) {
+                        const response = JSON.parse(xhr.responseText);
+                        if (inputUrlElement) inputUrlElement.value = response.url;
+                        if (previewElement) {
+                            previewElement.style.display = 'block';
+                            const img = previewElement.querySelector('img');
+                            if (img) img.src = response.url;
+                        }
+                        resolve(response);
+                    } else {
+                        reject(new Error('Error al subir imagen'));
+                    }
+                };
+                
+                xhr.onerror = () => reject(new Error('Error de conexión'));
+                xhr.send(formData);
+            });
+        }
+        
+        // ============================================
+// CRUD PILOTOS
+// ============================================
+
+async function cargarPilotos() {
+    const token = localStorage.getItem('token');
+    const incluirInactivos = document.getElementById('incluirInactivos')?.checked || false;
+    const tbody = document.querySelector('#tablaPilotos tbody');
+    const esAdmin = pilotoActual.rol === 'Admin';
+    const esSupervisor = pilotoActual.rol === 'Supervisor';
+    
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">Cargando...';
+    
+    try {
+        const res = await fetch(`http://localhost:3000/api/admin/pilotos?incluirInactivos=${incluirInactivos}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (!res.ok) {
+            tbody.innerHTML = '</table><td colspan="6" style="text-align: center; color:red;">Error de permisos</tbody>';
+            return;
+        }
+        
+        const data = await res.json();
+        
+        if (!data.pilotos || data.pilotos.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">No hay pilotos registrados</tbody>';
+            return;
+        }
+        
+        tbody.innerHTML = data.pilotos.map(p => {
+            const estaActivo = p.activo !== 0;
+            const esAdminObjetivo = p.rol === 'Admin';
+            
+            const estadoBadge = estaActivo 
+                ? '<span class="badge-rol" style="background: #28a745;">✅ Activo</span>'
+                : '<span class="badge-rol" style="background: #dc3545;">📦 Archivado</span>';
+            
+            // Columna de rol (solo Admin puede cambiarlo)
+            let rolColumn = '';
+            if (esAdmin) {
+                const rolIcono = p.rol === 'Admin' ? '👑' : (p.rol === 'Supervisor' ? '👁️' : (p.rol === 'Instructor' ? '📚' : '👨‍✈️'));
+                rolColumn = `
+                    <select class="rol-select" onchange="cambiarRol('${p.id}', this.value)">
+                        <option value="Piloto" ${p.rol === 'Piloto' ? 'selected' : ''}>${rolIcono} Piloto</option>
+                        <option value="Instructor" ${p.rol === 'Instructor' ? 'selected' : ''}>📚 Instructor</option>
+                        <option value="Supervisor" ${p.rol === 'Supervisor' ? 'selected' : ''}>👁️ Supervisor</option>
+                        <option value="Admin" ${p.rol === 'Admin' ? 'selected' : ''}>👑 Admin</option>
+                    </select>
+                `;
+            } else {
+                const rolIcono = p.rol === 'Admin' ? '👑' : (p.rol === 'Supervisor' ? '👁️' : (p.rol === 'Instructor' ? '📚' : '👨‍✈️'));
+                rolColumn = `<span class="badge-rol" style="background: var(--af-sky);">${rolIcono} ${p.rol}</span>`;
+            }
+            
+            // Botones - Supervisor NO puede modificar Admins
+            // Botón editar (Admin puede editar a todos, incluyéndose a sí mismo)
+const editarBtn = (esAdmin || (esSupervisor && !esAdminObjetivo)) 
+    ? `<button class="btn-small btn-primary-small" onclick="editarPiloto('${p.id}')"><i class="fas fa-edit"></i></button>`
+    : '';
+
+// Botón cambiar contraseña (Admin puede cambiar a todos, incluyéndose a sí mismo)
+const passwordBtn = (esAdmin || (esSupervisor && !esAdminObjetivo)) 
+    ? `<button class="btn-small btn-primary-small" onclick="abrirModalPassword('${p.id}')"><i class="fas fa-key"></i></button>`
+    : '';
+            
+            // Botón ascender (Admin puede ascender a todos, Supervisor no puede ascender a Admins)
+const ascenderBtn = (esAdmin || (esSupervisor && !esAdminObjetivo)) 
+    ? `<button class="btn-small btn-success-small" onclick="ascenderPiloto('${p.id}')"><i class="fas fa-arrow-up"></i></button>`
+    : '';
+
+// Botón degradar (Admin puede degradar a todos, Supervisor no puede degradar a Admins)
+const degradarBtn = (esAdmin || (esSupervisor && !esAdminObjetivo)) 
+    ? `<button class="btn-small btn-warning-small" onclick="degradarPiloto('${p.id}')"><i class="fas fa-arrow-down"></i></button>`
+    : '';
+
+// Botón archivar/activar (Admin puede archivar a todos, Supervisor no puede archivar a Admins)
+const archivarBtn = ((esAdmin || (esSupervisor && !esAdminObjetivo)) && estaActivo) 
+    ? `<button class="btn-small btn-warning-small" onclick="archivarPiloto('${p.id}')"><i class="fas fa-archive"></i></button>`
+    : ((esAdmin || (esSupervisor && !esAdminObjetivo)) && !estaActivo) 
+        ? `<button class="btn-small btn-success-small" onclick="activarPiloto('${p.id}')"><i class="fas fa-trash-restore"></i></button>`
+        : '';
+            
+            // Botón eliminar (solo Admin, y no puede eliminarse a sí mismo)
+            const eliminarBtn = esAdmin && p.id !== pilotoActual.id 
+                ? `<button class="btn-small btn-danger-small" onclick="eliminarPiloto('${p.id}')"><i class="fas fa-trash"></i></button>`
+                : '';
+            
+            return `
+                <tr>
+                    <td>${p.id}${!estaActivo ? ' <span style="color:red;">(Archivado)</span>' : ''}</td>
+                    <td>${p.nombre_completo}${!estaActivo ? ' <span style="color:red;">(Archivado)</span>' : ''}</td>
+                    <td>${p.grado_nombre || p.grado_code}</td>
+                    <td>${p.email}</td>
+                    <td>
+                        ${estadoBadge}<br>
+                        ${rolColumn}
+                     </td>
+                    <td>
+                        ${editarBtn}
+                        ${passwordBtn}
+                        ${ascenderBtn}
+                        ${degradarBtn}
+                        ${archivarBtn}
+                        ${eliminarBtn}
+                     </td>
+                </tr>
+            `;
+        }).join('');
+    } catch (error) {
+        console.error('Error:', error);
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color:red;">Error al cargar</tbody>';
+    }
+}
+        
+    async function cambiarRol(id, nuevoRol) {
+    const token = localStorage.getItem('token');
+    const pilotoActualLogueado = JSON.parse(localStorage.getItem('piloto'));
+    
+    // Si es el mismo usuario (Admin cambiándose a sí mismo)
+    const esMismoUsuario = pilotoActualLogueado.id === id;
+    
+    try {
+        const res = await fetch(`http://localhost:3000/api/admin/pilotos/${id}/rol`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ rol: nuevoRol })
+        });
+        
+        if (res.ok) {
+mostrarAlerta(`Rol actualizado a ${nuevoRol}`, 'success');            
+            if (esMismoUsuario) {
+                // El Admin se cambió a sí mismo - mostrar modal
+                mostrarModalSesionExpirada();
+            } else {
+                // Es otro usuario, solo recargar la tabla
+                cargarPilotos();
+            }
+        } else {
+            const error = await res.json();
+            mostrarAlerta(error.error || 'No se pudo actualizar el rol', 'error');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        mostrarAlerta('Error al cambiar el rol', 'error');
+    }
+}
+
+// Agregar la función mostrarModalSesionExpirada también en admin.html
+function mostrarModalSesionExpirada(mensajePersonalizado = null) {
+    const modal = document.getElementById('modalSesionExpirada');
+    const mensajeEl = document.querySelector('#modalSesionExpirada p:first-of-type');
+    
+    if (modal) {
+        if (mensajePersonalizado) {
+            mensajeEl.textContent = mensajePersonalizado;
+        } else {
+            mensajeEl.textContent = 'Tu rol ha sido modificado por un administrador.';
+        }
+        modal.style.display = 'flex';
+        modal.onclick = function(event) {
+            if (event.target === modal) return;
+        };
+        const btnCerrar = document.getElementById('btnCerrarSesionForzada');
+        if (btnCerrar) {
+            btnCerrar.onclick = function() {
+                localStorage.clear();
+                window.location.href = 'index.html';
+            };
+        }
+    } else {
+        alert(mensajePersonalizado || 'Tu rol ha cambiado. Debes volver a iniciar sesión.');
+        localStorage.clear();
+        window.location.href = 'index.html';
+    }
+}
+        
+      async function editarPiloto(id) {
+    const token = localStorage.getItem('token');
+    
+    // Verificar permisos
+    if (pilotoActual.rol !== 'Admin' && pilotoActual.rol !== 'Supervisor') {
+        mostrarAlerta('No tienes permiso para editar pilotos', 'error');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`http://localhost:3000/api/admin/pilotos/${id}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (!response.ok) {
+            mostrarAlerta('No se pudo cargar el piloto', 'error');
+            return;
+        }
+        
+        const data = await response.json();
+        const p = data.piloto;
+        
+        document.getElementById('edit_piloto_id').value = p.id;
+        document.getElementById('edit_piloto_nombre').value = p.nombre_completo;
+        document.getElementById('edit_piloto_email').value = p.email;
+        document.getElementById('edit_piloto_discord_id').value = p.discord_id || '';
+        document.getElementById('edit_piloto_foto').value = p.foto_url || '';
+        
+        document.getElementById('modalEditarPiloto').style.display = 'flex';
+    } catch (error) {
+        console.error('Error:', error);
+        mostrarAlerta('Error al cargar el piloto', 'error');
+    }
+}
+
+        
+        async function ascenderPiloto(id) {
+    if (pilotoActual.rol !== 'Admin' && pilotoActual.rol !== 'Supervisor') {
+        mostrarAlerta('No tienes permiso para ascender pilotos', 'error');
+        return;
+    }
+    
+    const motivo = prompt('Motivo del ascenso:');
+    const token = localStorage.getItem('token');
+    
+    try {
+        const res = await fetch(`http://localhost:3000/api/admin/pilotos/${id}/cambiar-grado`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ tipo: 'ascenso', motivo: motivo || null })
+        });
+        
+        const result = await res.json();
+        
+        if (res.ok) {
+            mostrarAlerta(result.mensaje, 'success');
+            cargarPilotos();
+        } else {
+            mostrarAlerta('❌ Error: ' + result.error, 'error');
+        }
+    } catch (error) {
+        mostrarAlerta('❌ Error al ascender', 'error');
+    }
+}
+
+async function degradarPiloto(id) {
+    if (pilotoActual.rol !== 'Admin' && pilotoActual.rol !== 'Supervisor') {
+        mostrarAlerta('No tienes permiso para degradar pilotos', 'error');
+        return;
+    }
+    
+    const motivo = prompt('Motivo del descenso:');
+    const token = localStorage.getItem('token');
+    
+    try {
+        const res = await fetch(`http://localhost:3000/api/admin/pilotos/${id}/cambiar-grado`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ tipo: 'descenso', motivo: motivo || null })
+        });
+        
+        const result = await res.json();
+        
+        if (res.ok) {
+            mostrarAlerta(result.mensaje, 'success');
+            cargarPilotos();
+        } else {
+            mostrarAlerta('❌ Error: ' + result.error, 'error');
+        }
+    } catch (error) {
+        mostrarAlerta('❌ Error al degradar', 'error');
+    }
+}
+        
+        async function archivarPiloto(id) {
+    if (pilotoActual.rol !== 'Admin' && pilotoActual.rol !== 'Supervisor') {
+        mostrarAlerta('No tienes permiso para archivar pilotos', 'error');
+        return;
+    }
+    
+    if (!confirm('¿Archivar este piloto? Sus datos se conservarán pero no podrá iniciar sesión.')) return;
+    
+    const token = localStorage.getItem('token');
+    const pilotoActualLogueado = JSON.parse(localStorage.getItem('piloto'));
+    const esMismoUsuario = pilotoActualLogueado.id === id;
+    
+    try {
+        const res = await fetch(`http://localhost:3000/api/admin/pilotos/${id}/archivar`, {
+            method: 'PUT',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (res.ok) {
+            if (esMismoUsuario) {
+                mostrarAlerta('Has archivado tu propia cuenta. La sesión se cerrará.', 'warning');
+                setTimeout(() => {
+                    localStorage.clear();
+                    window.location.href = 'index.html';
+                }, 2000);
+            } else {
+                mostrarAlerta('✅ Piloto archivado', 'success');
+                cargarPilotos();
+                cargarStats();
+            }
+        } else {
+            mostrarAlerta('❌ Error al archivar', 'error');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        mostrarAlerta('❌ Error al archivar', 'error');
+    }
+}
+
+        
+        async function activarPiloto(id) {
+    if (pilotoActual.rol !== 'Admin' && pilotoActual.rol !== 'Supervisor') {
+        mostrarAlerta('No tienes permiso para activar pilotos', 'error');
+        return;
+    }
+    
+    if (!confirm('¿Activar este piloto? Volverá a aparecer en las listas.')) return;
+    
+    const token = localStorage.getItem('token');
+    
+    try {
+        const res = await fetch(`http://localhost:3000/api/admin/pilotos/${id}/activar`, {
+            method: 'PUT',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (res.ok) {
+            mostrarAlerta('✅ Piloto activado', 'success');
+            cargarPilotos();
+            cargarStats();
+        } else {
+            mostrarAlerta('❌ Error al activar', 'error');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        mostrarAlerta('❌ Error al activar', 'error');
+    }
+}
+        
+        async function eliminarPiloto(id) {
+            if (!confirm('¿Eliminar este piloto permanentemente?')) return;
+            const token = localStorage.getItem('token');
+            const res = await fetch(`http://localhost:3000/api/admin/pilotos/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                mostrarAlerta('Piloto eliminado', 'success');
+                cargarPilotos();
+                cargarStats();
+            } else {
+                mostrarAlerta('Error al eliminar', 'error');
+            }
+        }
+        
+        // ============================================
+        // CRUD AERONAVES
+        // ============================================
+        
+        async function cargarAeronaves() {
+            const token = localStorage.getItem('token');
+            const tbody = document.querySelector('#tablaAeronaves tbody');
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">Cargando...</tbody>';
+            
+            try {
+                const res = await fetch('http://localhost:3000/api/admin/aeronaves', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+                
+                if (!data.aeronaves || data.aeronaves.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">No hay aeronaves registradas</tbody>';
+                    return;
+                }
+                
+                tbody.innerHTML = data.aeronaves.map(a => `
+                    <tr>
+                        <td>${a.id}</td>
+                        <td>${a.modelo}</td>
+                        <td>${a.nivel || 'Básico'}</td>
+                        <td>${a.tipo || 'Ala fija'}</td>
+                        <td>${a.estado}</td>
+                        <td>
+                            <button class="btn-small btn-primary-small" onclick="editarAeronave('${a.id}')"><i class="fas fa-edit"></i></button>
+                            <button class="btn-small btn-danger-small" onclick="eliminarAeronave('${a.id}')"><i class="fas fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                console.error('Error:', error);
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color:red;">Error al cargar</tbody>';
+            }
+        }
+        
+        async function editarAeronave(id) {
+            console.log('📝 Editando aeronave ID:', id);
+            const token = localStorage.getItem('token');
+            
+            try {
+                const response = await fetch(`http://localhost:3000/api/admin/aeronaves/${encodeURIComponent(id)}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    mostrarAlerta(error.error || 'No se pudo cargar la aeronave', 'error');
+                    return;
+                }
+                
+                const data = await response.json();
+                
+                if (!data.aeronave) {
+                    mostrarAlerta('Aeronave no encontrada', 'error')
+                    return;
+                }
+                
+                const a = data.aeronave;
+                document.getElementById('edit_aeronave_id').value = a.id;
+                document.getElementById('edit_aeronave_modelo').value = a.modelo;
+                document.getElementById('edit_aeronave_nivel').value = a.nivel || 'Básico';
+                document.getElementById('edit_aeronave_tipo').value = a.tipo || 'Ala fija';
+                document.getElementById('edit_aeronave_estado').value = a.estado;
+                document.getElementById('edit_aeronave_imagen').value = a.imagen_url || '';
+                
+                document.getElementById('modalEditarAeronave').style.display = 'flex';
+            } catch (error) {
+                console.error('Error:', error);
+                mostrarAlerta('Error al cargar la aeronave', 'error');
+            }
+        }
+        
+        async function eliminarAeronave(id) {
+            if (!confirm('¿Estás seguro de eliminar esta aeronave?')) return;
+            
+            const token = localStorage.getItem('token');
+            
+            try {
+                const response = await fetch(`http://localhost:3000/api/admin/aeronaves/${encodeURIComponent(id)}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    mostrarAlerta('Aeronave eliminada', 'success');
+                    cargarAeronaves();
+                    cargarStats();
+                } else {
+                    mostrarAlerta(result.error || 'No se pudo eliminar', 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                mostrarAlerta('Error al eliminar', 'error');
+            }
+        }
+        
+        // ============================================
+        // CRUD RANGOS
+        // ============================================
+        
+        async function cargarRangosAdmin() {
+    // No cargar desde el servidor, usar rangosEditables directamente
+    const tbody = document.querySelector('#tablaRangos tbody');
+    
+    if (!rangosEditables || rangosEditables.length === 0) {
+        // Solo cargar desde servidor si está vacío
+        const token = localStorage.getItem('token');
+        const res = await fetch('http://localhost:3000/api/admin/rangos', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        rangosEditables = data.ranks || [];
+    }
+    
+    tbody.innerHTML = rangosEditables.map((r, index) => {
+        const logoUrl = r.logo_url ? `http://localhost:3000${r.logo_url}` : null;
+        const logoHtml = logoUrl 
+            ? `<img src="${logoUrl}" class="rango-logo-tabla" onerror="this.style.display='none';">`
+            : `<div style="width: 40px; height: 40px; background: var(--af-gray); border-radius: 5px; display: flex; align-items: center; justify-content: center;"><i class="fas fa-image"></i></div>`;
+        
+        return `
+            <tr>
+                <td>${logoHtml}<br>
+                    <button class="btn-small btn-primary-small" onclick="subirLogoRango(${r.id}, ${index})">Subir Logo</button>
+                </td>
+                <td><input type="text" class="rango-code" value="${r.code}" data-index="${index}" style="width:100px"></td>
+                <td><input type="text" class="rango-name" value="${r.nombre}" data-index="${index}" style="width:200px"></td>
+                <td><input type="number" class="rango-order" value="${r.orden}" data-index="${index}" style="width:80px"></td>
+                <td><input type="text" class="rango-discord-role" value="${r.discord_role_id || ''}" data-index="${index}" style="width:150px" placeholder="ID del rol"></td>
+                <td><button class="btn-small btn-danger-small" onclick="eliminarRangoFila(${index})">Eliminar</button></td>
+            </tr>
+        `;
+    }).join('');
+}
+        
+        async function subirLogoRango(rangoId, index) {
+    console.log('Subiendo logo para rango ID:', rangoId);
+    
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        const formData = new FormData();
+        formData.append('imagen', file);
+        const token = localStorage.getItem('token');
+        
+        try {
+            const response = await fetch(`http://localhost:3000/api/admin/upload/rango/${rangoId}`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                },
+                body: formData
+            });
+            
+            const result = await response.json();
+            console.log('Respuesta:', result);
+            
+            if (response.ok) {
+                mostrarAlerta('Logo subido correctamente', 'success')
+                cargarRangosAdmin();
+            } else {
+                mostrarAlerta(result.error || 'Error desconocido al subir logo', 'error');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            mostrarAlerta('Error de conexión', 'error');
+        }
+    };
+    input.click();
+}
+        
+        function agregarRango() {
+    console.log('1. Función agregarRango ejecutada');
+    
+    if (!rangosEditables) {
+        console.log('2. rangosEditables no existe, creándolo');
+        rangosEditables = [];
+    }
+    
+    console.log('3. rangosEditables actual:', rangosEditables);
+    
+    const newIndex = rangosEditables.length;
+    console.log('4. Nuevo índice:', newIndex);
+    
+    rangosEditables.push({ code: 'NEW', nombre: 'Nuevo Rango', orden: newIndex + 1 });
+    console.log('5. rangosEditables después:', rangosEditables);
+    
+    console.log('6. Llamando a cargarRangosAdmin...');
+    cargarRangosAdmin();
+}
+        
+        function eliminarRangoFila(index) {
+            rangosEditables.splice(index, 1);
+            cargarRangosAdmin();
+        }
+        
+        async function guardarRangos() {
+    const codes = document.querySelectorAll('.rango-code');
+    const names = document.querySelectorAll('.rango-name');
+    const orders = document.querySelectorAll('.rango-order');
+    const discordRoles = document.querySelectorAll('.rango-discord-role');
+    
+    const nuevosRangos = [];
+    for (let i = 0; i < codes.length; i++) {
+        nuevosRangos.push({
+            code: codes[i].value,
+            name: names[i].value,
+            orden: parseInt(orders[i].value),
+            logo_url: rangosEditables[i]?.logo_url || null,
+            discord_role_id: discordRoles[i]?.value || null
+        });
+    }
+    
+    const token = localStorage.getItem('token');
+    const response = await fetch('http://localhost:3000/api/admin/rangos', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ ranks: nuevosRangos })
+    });
+    
+    const result = await response.json();
+    console.log('Respuesta:', result);
+    
+    if (response.ok) {
+        mostrarAlerta('✅ Rangos guardados', 'success');
+        rangosEditables = nuevosRangos;
+        cargarRangosAdmin();
+    } else {
+        mostrarAlerta('❌ Error: ' + (result.error || 'No se pudieron guardar'), 'error');
+        // Recargar rangos desde el servidor para restaurar
+        await cargarRangosAdmin();
+    }
+}
+        
+        // ============================================
+        // ESTADÍSTICAS
+        // ============================================
+        
+        async function cargarStats() {
+            const token = localStorage.getItem('token');
+            const res = await fetch('http://localhost:3000/api/admin/stats', { headers: { 'Authorization': `Bearer ${token}` } });
+            const data = await res.json();
+            document.getElementById('statsContainer').innerHTML = `
+                <div class="stat-card-admin"><div class="stat-number">${data.stats.totalPilotos}</div><div class="stat-label">Pilotos Activos</div></div>
+                <div class="stat-card-admin"><div class="stat-number">${data.stats.totalAeronaves}</div><div class="stat-label">Aeronaves</div></div>
+                <div class="stat-card-admin"><div class="stat-number">${data.stats.solicitudesPendientes}</div><div class="stat-label">Solicitudes Pendientes</div></div>
+                <div class="stat-card-admin"><div class="stat-number">${data.stats.totalVuelos || 0}</div><div class="stat-label">Vuelos Registrados</div></div>
+            `;
+        }
+        
+        // ============================================
+        // MODALES
+        // ============================================
+        
+        function abrirModalPiloto() {
+    document.getElementById('modalPiloto').style.display = 'flex';
+    document.getElementById('formPiloto').reset();
+    document.getElementById('fotoPreview').style.display = 'none';
+    document.getElementById('piloto_id').value = generarID();
+    cargarRangosSelect();
+    
+    // Si es Supervisor, ocultar la opción "Admin" en el select de roles
+    if (pilotoActual.rol === 'Supervisor') {
+        const selectRol = document.getElementById('piloto_rol');
+        if (selectRol) {
+            // Limpiar y recrear solo las opciones permitidas
+            selectRol.innerHTML = `
+                <option value="Piloto">👨‍✈️ Piloto</option>
+                <option value="Instructor">📚 Instructor</option>
+                <option value="Supervisor">👁️ Supervisor</option>
+            `;
+        }
+    } else if (pilotoActual.rol === 'Admin') {
+        // Admin ve todas las opciones
+        const selectRol = document.getElementById('piloto_rol');
+        if (selectRol) {
+            selectRol.innerHTML = `
+                <option value="Piloto">👨‍✈️ Piloto</option>
+                <option value="Instructor">📚 Instructor</option>
+                <option value="Supervisor">👁️ Supervisor</option>
+                <option value="Admin">👑 Admin</option>
+            `;
+        }
+    }
+}
+        
+        function cerrarModalPiloto() { document.getElementById('modalPiloto').style.display = 'none'; }
+        function cerrarModalEditarPiloto() { document.getElementById('modalEditarPiloto').style.display = 'none'; }
+        function abrirModalAeronave() { document.getElementById('modalAeronave').style.display = 'flex'; }
+        function cerrarModalAeronave() { document.getElementById('modalAeronave').style.display = 'none'; }
+        function cerrarModalEditarAeronave() { document.getElementById('modalEditarAeronave').style.display = 'none'; }
+        function abrirModalPassword(id) { pilotoIdSeleccionado = id; document.getElementById('modalPassword').style.display = 'flex'; }
+        function cerrarModalPassword() { document.getElementById('modalPassword').style.display = 'none'; }
+        
+        // ============================================
+        // SUBIR IMAGEN EN EDICIÓN
+        // ============================================
+        
+        const uploadAreaEditarPiloto = document.getElementById('uploadAreaEditarPiloto');
+        const fotoArchivoEditarPiloto = document.getElementById('fotoArchivoEditarPiloto');
+        
+        if (uploadAreaEditarPiloto) {
+            uploadAreaEditarPiloto.addEventListener('click', () => fotoArchivoEditarPiloto.click());
+            
+            fotoArchivoEditarPiloto.addEventListener('change', async function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+                const id = document.getElementById('edit_piloto_id').value;
+                if (!id) { mostrarAlerta('Primero guarda el piloto', 'warning'); return; }
+                
+                const preview = document.getElementById('uploadPreviewEditarPiloto');
+                const previewImg = document.getElementById('uploadPreviewImgEditarPiloto');
+                const progress = document.getElementById('uploadProgressEditarPiloto');
+                const urlInput = document.getElementById('edit_piloto_foto');
+                
+                const reader = new FileReader();
+                reader.onload = (e) => { previewImg.src = e.target.result; preview.style.display = 'block'; };
+                reader.readAsDataURL(file);
+                
+                try {
+                    await subirImagen('piloto', file, id, preview, progress, urlInput);
+                    mostrarAlerta('Imagen subida correctamente', 'success');
+                } catch (error) {
+                    mostrarAlerta(error.message || 'Error al subir imagen', 'error');
+                }
+            });
+        }
+        
+        const uploadAreaEditarAeronave = document.getElementById('uploadAreaEditarAeronave');
+        const fotoArchivoEditarAeronave = document.getElementById('fotoArchivoEditarAeronave');
+        
+        if (uploadAreaEditarAeronave) {
+            uploadAreaEditarAeronave.addEventListener('click', () => fotoArchivoEditarAeronave.click());
+            
+            fotoArchivoEditarAeronave.addEventListener('change', async function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+                const id = document.getElementById('edit_aeronave_id').value;
+                if (!id) { mostrarAlerta('Primero guarda la aeronave', 'warning'); return; }
+                
+                const preview = document.getElementById('uploadPreviewEditarAeronave');
+                const previewImg = document.getElementById('uploadPreviewImgEditarAeronave');
+                const progress = document.getElementById('uploadProgressEditarAeronave');
+                const urlInput = document.getElementById('edit_aeronave_imagen');
+                
+                const reader = new FileReader();
+                reader.onload = (e) => { previewImg.src = e.target.result; preview.style.display = 'block'; };
+                reader.readAsDataURL(file);
+                
+                try {
+                    await subirImagen('aeronave', file, id, preview, progress, urlInput);
+                    mostrarAlerta('Imagen subida correctamente', 'success');
+                } catch (error) {
+                    mostrarAlerta(error.message || 'Error al subir imagen', 'error');
+                }
+            });
+        }
+        
+        // ============================================
+        // ENVÍO DE FORMULARIOS
+        // ============================================
+        
+        document.getElementById('formPiloto').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const token = localStorage.getItem('token');
+            const data = {
+                id: document.getElementById('piloto_id').value,
+                nombre_completo: document.getElementById('piloto_nombre').value,
+                grado_code: document.getElementById('piloto_grado').value,
+                email: document.getElementById('piloto_email').value,
+                password: document.getElementById('piloto_password').value,
+                tipo_sangre: document.getElementById('piloto_sangre').value,
+                nacionalidad: document.getElementById('piloto_nacionalidad').value,
+                rol: document.getElementById('piloto_rol').value,
+            
+                foto_url: document.getElementById('piloto_foto').value || null
+            };
+            
+            const res = await fetch('http://localhost:3000/api/admin/pilotos', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify(data)
+            });
+            
+            if (res.ok) {
+                mostrarAlerta('Piloto creado', 'success');
+                cerrarModalPiloto();
+                cargarPilotos();
+                cargarStats();
+            } else {
+                const result = await res.json();
+                mostrarAlerta(result.error || 'No se pudo crear', 'error');
+            }
+        });
+        
+        document.getElementById('formEditarPiloto').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = document.getElementById('edit_piloto_id').value;
+    const token = localStorage.getItem('token');
+    
+    const data = {
+        nombre_completo: document.getElementById('edit_piloto_nombre').value,
+        email: document.getElementById('edit_piloto_email').value,
+        foto_url: document.getElementById('edit_piloto_foto').value || null,
+        discord_id: document.getElementById('edit_piloto_discord_id').value || null
+    };
+    
+    const res = await fetch(`http://localhost:3000/api/admin/pilotos/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(data)
+    });
+    
+    if (res.ok) {
+        // Actualizar localStorage si es el mismo usuario
+        if (id === pilotoActual.id) {
+            const pilotoActualizado = JSON.parse(localStorage.getItem('piloto'));
+            pilotoActualizado.nombre = data.nombre_completo;
+            pilotoActualizado.email = data.email;
+            pilotoActualizado.foto_url = data.foto_url;
+            localStorage.setItem('piloto', JSON.stringify(pilotoActualizado));
+        }
+        mostrarAlerta('✅ Piloto actualizado', 'success');
+        cerrarModalEditarPiloto();
+        cargarPilotos();
+    } else {
+        mostrarAlerta('❌ Error al actualizar', 'error');
+    }
+});
+        
+        document.getElementById('formAeronave').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const token = localStorage.getItem('token');
+            const data = {
+                id: document.getElementById('aeronave_id').value,
+                modelo: document.getElementById('aeronave_modelo').value,
+                nivel: document.getElementById('aeronave_nivel').value,
+                tipo: document.getElementById('aeronave_tipo').value,
+                estado: document.getElementById('aeronave_estado').value,
+                imagen_url: document.getElementById('aeronave_imagen').value || null
+            };
+            
+            const res = await fetch('http://localhost:3000/api/admin/aeronaves', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify(data)
+            });
+            
+            if (res.ok) {
+                mostrarAlerta('Aeronave agregada', 'success');
+                cerrarModalAeronave();
+                cargarAeronaves();
+                cargarStats();
+            } else {
+                const result = await res.json();
+                mostrarAlerta(result.error || 'No se pudo agregar', 'error');
+            }
+        });
+        
+        document.getElementById('formEditarAeronave').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('edit_aeronave_id').value;
+            const token = localStorage.getItem('token');
+            
+            const data = {
+                modelo: document.getElementById('edit_aeronave_modelo').value,
+                nivel: document.getElementById('edit_aeronave_nivel').value,
+                tipo: document.getElementById('edit_aeronave_tipo').value,
+                estado: document.getElementById('edit_aeronave_estado').value,
+                imagen_url: document.getElementById('edit_aeronave_imagen').value || null
+            };
+            
+            const res = await fetch(`http://localhost:3000/api/admin/aeronaves/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify(data)
+            });
+            
+            if (res.ok) {
+                mostrarAlerta('Aeronave actualizada', 'success');
+                cerrarModalEditarAeronave();
+                cargarAeronaves();
+                cargarStats();
+            } else {
+                mostrarAlerta('Error al actualizar', 'error');
+            }
+        });
+        
+        document.getElementById('formPassword').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const token = localStorage.getItem('token');
+            const res = await fetch(`http://localhost:3000/api/admin/pilotos/${pilotoIdSeleccionado}/password`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ newPassword: document.getElementById('newPassword').value })
+            });
+            if (res.ok) {
+                mostrarAlerta('Contraseña actualizada', 'success');
+
+                cerrarModalPassword();
+            } else {
+                mostrarAlerta('Error al cambiar contraseña', 'error');
+
+            }
+        });
+        
+        // ============================================
+        // NAVEGACIÓN Y TABS
+        // ============================================
+        
+        function showTab(tab) {
+    // Verificar que event existe antes de usarlo
+    const botones = document.querySelectorAll('.tab-btn');
+    botones.forEach(btn => btn.classList.remove('active'));
+    
+    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+    document.getElementById(`tab-${tab}`).classList.add('active');
+    
+    // Marcar el botón activo
+    const botonActivo = Array.from(botones).find(btn => btn.getAttribute('onclick')?.includes(`'${tab}'`));
+    if (botonActivo) {
+        botonActivo.classList.add('active');
+    }
+    
+    if (tab === 'pilotos') cargarPilotos();
+    if (tab === 'aeronaves') cargarAeronaves();
+    if (tab === 'rangos') cargarRangosAdmin();
+}
+        
+        function cerrarSesion() { localStorage.clear(); window.location.href = 'index.html'; }
+        function toggleMobileMenu() { document.getElementById('sidebar').classList.toggle('mobile-open'); }
+        function toggleProfileDropdown() { document.getElementById('profileDropdown').classList.toggle('show'); }
+        function closeDropdownOnClickOutside(e) {
+            const btn = document.getElementById('profileBtn');
+            const dd = document.getElementById('profileDropdown');
+            if (!btn.contains(e.target) && !dd.contains(e.target)) dd.classList.remove('show');
+        }
+        
+        async function editarMiPerfil() {
+            const token = localStorage.getItem('token');
+            const id = pilotoActual.id;
+            
+            const res = await fetch(`http://localhost:3000/api/admin/pilotos/${id}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await res.json();
+            const p = data.piloto;
+            
+            document.getElementById('edit_piloto_id').value = p.id;
+            document.getElementById('edit_piloto_nombre').value = p.nombre_completo;
+            document.getElementById('edit_piloto_email').value = p.email;
+            document.getElementById('edit_piloto_foto').value = p.foto_url || '';
+            
+            document.getElementById('modalEditarPiloto').style.display = 'flex';
+        }
+        
+        document.getElementById('menuToggle').addEventListener('click', toggleMobileMenu);
+        document.getElementById('profileBtn').addEventListener('click', toggleProfileDropdown);
+        document.getElementById('miPerfilBtn').addEventListener('click', editarMiPerfil);
+        document.getElementById('cerrarSesionBtn').addEventListener('click', cerrarSesion);
+        document.addEventListener('click', closeDropdownOnClickOutside);
+        
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                cerrarModalPiloto();
+                cerrarModalEditarPiloto();
+                cerrarModalAeronave();
+                cerrarModalEditarAeronave();
+                cerrarModalPassword();
+            }
+        });
+        
+      async function init() {
+    if (!verificarAcceso()) return;
+    
+    if (pilotoActual.rol === 'Admin') {
+        await cargarRangos();
+        await cargarStats();
+        await cargarPilotos();
+        await cargarAeronaves();
+    } else if (pilotoActual.rol === 'Supervisor') {
+        await cargarPilotos();
+    }
+    
+    // Iniciar verificación periódica de rol (cada 10 segundos)
+    setInterval(verificarRolPeriodicamente, 10000);
+}
+        
+        init();
+
+        // Verificar rol y estado periódicamente (cada 10 segundos)
+function iniciarVerificacionPeriodica() {
+    setInterval(async () => {
+        const token = localStorage.getItem('token');
+        const piloto = localStorage.getItem('piloto');
+        if (!token || !piloto) return;
+        
+        const pilotoData = JSON.parse(piloto);
+        
+        // Si es Admin, no verificar (opcional, puedes quitarlo si quieres que también verifique)
+        if (pilotoData.rol === 'Admin') return;
+        
+        try {
+            const response = await fetch(`http://localhost:3000/api/pilotos/${pilotoData.id}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                const rolEnBD = data.piloto?.rol;
+                const activoEnBD = data.piloto?.activo;
+                
+                // Verificar si fue archivado
+                if (activoEnBD === 0) {
+                    console.log('⚠️ Usuario archivado!');
+                    mostrarModalSesionExpirada('Su cuenta ha sido desactivada. Ya no pertenece a la Fuerza Aérea de LSAF.');
+                    return;
+                }
+                
+                // Verificar cambio de rol
+                if (rolEnBD && rolEnBD !== pilotoData.rol) {
+                    console.log('⚠️ Rol cambiado!');
+                    mostrarModalSesionExpirada('Su rol ha sido modificado. Debe volver a iniciar sesión.');
+                }
+            }
+        } catch (error) {
+            console.error('Error al verificar:', error);
+        }
+    }, 10000); // Cada 10 segundos
+}
+
+// Llamar a esta función después de iniciar sesión
+iniciarVerificacionPeriodica();
+    </script>
+</body>
+</html>

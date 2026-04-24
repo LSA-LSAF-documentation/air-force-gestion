@@ -1,0 +1,414 @@
+/* ============================================
+   AIR FORCE STYLE SYSTEM
+   Colores institucionales
+   ============================================ */
+
+:root {
+    /* Paleta principal Air Force */
+    --af-deep-blue: #0a1928;
+    --af-navy: #1a2a4f;
+    --af-silver: #8b9dc3;
+    --af-sky: #4a7db5;
+    --af-light-sky: #c4d7ed;
+    --af-gray: #e8eef2;
+    --af-dark-gray: #4a5568;
+    --af-white: #ffffff;
+    --af-black: #1a202c;
+    
+    /* Estados */
+    --af-success: #2e7d32;
+    --af-warning: #ed6c02;
+    --af-error: #d32f2f;
+    --af-info: #0288d1;
+    
+    /* Sombras */
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.12);
+    --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
+    --shadow-lg: 0 10px 15px rgba(0,0,0,0.1);
+    --shadow-xl: 0 20px 25px rgba(0,0,0,0.15);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', 'Roboto', 'Oxygen', sans-serif;
+    background: var(--af-gray);
+    color: var(--af-black);
+    overflow-x: hidden;
+}
+
+/* ============================================
+   BARRA LATERAL (SIDEBAR)
+   ============================================ */
+
+.sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 280px;
+    height: 100vh;
+    background: linear-gradient(180deg, var(--af-deep-blue) 0%, var(--af-navy) 100%);
+    color: var(--af-white);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 1000;
+    box-shadow: var(--shadow-xl);
+    overflow-y: auto;
+}
+
+.sidebar.collapsed {
+    transform: translateX(-280px);
+}
+
+/* Logo y branding */
+.sidebar-brand {
+    padding: 25px 20px;
+    text-align: center;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    margin-bottom: 20px;
+}
+
+.sidebar-brand img {
+    max-width: 80px;
+    margin-bottom: 10px;
+}
+
+.sidebar-brand h3 {
+    font-size: 18px;
+    margin: 10px 0 5px;
+}
+
+.sidebar-brand p {
+    font-size: 11px;
+    opacity: 0.7;
+}
+
+/* Logos múltiples */
+.logos-container {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.logos-container img {
+    max-width: 35px;
+    opacity: 0.8;
+    transition: opacity 0.2s;
+}
+
+.logos-container img:hover {
+    opacity: 1;
+}
+
+/* Navegación */
+.sidebar-nav {
+    padding: 0 15px;
+}
+
+.nav-item {
+    margin-bottom: 5px;
+}
+
+.nav-link {
+    display: flex;
+    align-items: center;
+    padding: 12px 15px;
+    color: var(--af-light-sky);
+    text-decoration: none;
+    border-radius: 10px;
+    transition: all 0.2s;
+    gap: 12px;
+}
+
+.nav-link i {
+    width: 24px;
+    font-size: 18px;
+}
+
+.nav-link span {
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.nav-link:hover {
+    background: rgba(255,255,255,0.1);
+    color: var(--af-white);
+}
+
+.nav-link.active {
+    background: var(--af-sky);
+    color: var(--af-white);
+    box-shadow: var(--shadow-sm);
+}
+
+/* Perfil en sidebar */
+.sidebar-profile {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 20px;
+    border-top: 1px solid rgba(255,255,255,0.1);
+    background: rgba(0,0,0,0.2);
+}
+
+.profile-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 10px;
+    transition: background 0.2s;
+}
+
+.profile-info:hover {
+    background: rgba(255,255,255,0.1);
+}
+
+.profile-avatar {
+    width: 45px;
+    height: 45px;
+    background: var(--af-sky);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 18px;
+}
+
+.profile-details {
+    flex: 1;
+}
+
+.profile-name {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.profile-rank {
+    font-size: 11px;
+    opacity: 0.7;
+}
+
+/* Menú desplegable de perfil */
+.profile-dropdown {
+    position: absolute;
+    bottom: 80px;
+    left: 20px;
+    right: 20px;
+    background: var(--af-white);
+    border-radius: 10px;
+    padding: 10px;
+    box-shadow: var(--shadow-lg);
+    display: none;
+    z-index: 1100;
+}
+
+.profile-dropdown.show {
+    display: block;
+    animation: slideUp 0.2s ease;
+}
+
+.dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px;
+    color: var(--af-black);
+    text-decoration: none;
+    border-radius: 8px;
+    transition: background 0.2s;
+}
+
+.dropdown-item:hover {
+    background: var(--af-gray);
+}
+
+.dropdown-item i {
+    width: 20px;
+    color: var(--af-sky);
+}
+
+/* ============================================
+   CONTENIDO PRINCIPAL
+   ============================================ */
+
+.main-content {
+    margin-left: 280px;
+    transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    min-height: 100vh;
+}
+
+.main-content.expanded {
+    margin-left: 0;
+}
+
+/* Top bar */
+.top-bar {
+    background: var(--af-white);
+    padding: 15px 30px;
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    position: sticky;
+    top: 0;
+    z-index: 999;
+}
+
+.menu-toggle {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: var(--af-navy);
+    display: none;
+}
+
+.breadcrumbs {
+    flex: 1;
+    font-size: 14px;
+    color: var(--af-dark-gray);
+}
+
+.breadcrumbs a {
+    color: var(--af-sky);
+    text-decoration: none;
+}
+
+.breadcrumbs a:hover {
+    text-decoration: underline;
+}
+
+.breadcrumbs span {
+    margin: 0 8px;
+}
+
+/* Contenedor de páginas */
+.page-container {
+    padding: 30px;
+}
+
+/* ============================================
+   TARJETAS Y COMPONENTES
+   ============================================ */
+
+.card {
+    background: var(--af-white);
+    border-radius: 15px;
+    padding: 25px;
+    box-shadow: var(--shadow-md);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lg);
+}
+
+.btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-primary {
+    background: var(--af-navy);
+    color: white;
+}
+
+.btn-primary:hover {
+    background: var(--af-sky);
+    transform: translateY(-1px);
+}
+
+.btn-success {
+    background: var(--af-success);
+    color: white;
+}
+
+.btn-danger {
+    background: var(--af-error);
+    color: white;
+}
+
+/* ============================================
+   RESPONSIVE DESIGN
+   ============================================ */
+
+/* Tablets */
+@media (max-width: 1024px) {
+    .sidebar {
+        width: 240px;
+    }
+    .main-content {
+        margin-left: 240px;
+    }
+}
+
+/* Móviles */
+@media (max-width: 768px) {
+    .sidebar {
+        transform: translateX(-280px);
+    }
+    .sidebar.mobile-open {
+        transform: translateX(0);
+    }
+    .main-content {
+        margin-left: 0;
+    }
+    .menu-toggle {
+        display: block;
+    }
+    .top-bar {
+        padding: 12px 20px;
+    }
+    .page-container {
+        padding: 20px;
+    }
+    .profile-name, .profile-rank {
+        font-size: 12px;
+    }
+}
+
+/* Animaciones */
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Scrollbar personalizada */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--af-gray);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--af-silver);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--af-sky);
+}

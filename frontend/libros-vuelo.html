@@ -1,0 +1,1345 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Libros de Vuelo - LSAF Air Force</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="css/airforce-style.css">
+    <style>
+        .filtros-bar {
+            background: var(--af-white);
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .filtro-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .filtro-group select {
+            padding: 8px 15px;
+            border: 2px solid var(--af-gray);
+            border-radius: 8px;
+            background: white;
+            cursor: pointer;
+        }
+        
+        .btn-nuevo {
+            background: var(--af-success);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+        
+        .btn-nuevo:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+        
+        .tabla-vuelos {
+            background: white;
+            border-radius: 15px;
+            overflow-x: auto;
+            box-shadow: var(--shadow-md);
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th {
+            background: var(--af-navy);
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+        
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid var(--af-gray);
+        }
+        
+        tr:hover {
+            background: var(--af-gray);
+        }
+        
+        .clickable-row {
+            cursor: pointer;
+        }
+        
+        .badge-mision {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .Combate { background: #dc3545; color: white; }
+        .Entrenamiento { background: #28a745; color: white; }
+        .Transporte { background: #17a2b8; color: white; }
+        .Reconocimiento { background: #ffc107; color: #333; }
+        
+        .btn-eliminar {
+            background: #dc3545;
+            color: white;
+            padding: 4px 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 11px;
+            transition: all 0.2s;
+        }
+        
+        .btn-eliminar:hover {
+            background: #c82333;
+            transform: translateY(-1px);
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal-content {
+            background: white;
+            max-width: 750px;
+            width: 90%;
+            padding: 30px;
+            border-radius: 20px;
+            animation: slideUp 0.3s ease;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .close-modal {
+            font-size: 28px;
+            cursor: pointer;
+            color: #999;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--af-navy);
+        }
+        
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid var(--af-gray);
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        
+        .btn-guardar {
+            background: var(--af-sky);
+            color: white;
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+        
+        .btn-guardar:hover {
+            background: var(--af-navy);
+            transform: translateY(-1px);
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            background: white;
+            border-radius: 15px;
+        }
+        
+        .empty-state i {
+            font-size: 64px;
+            color: var(--af-silver);
+            margin-bottom: 20px;
+        }
+        
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        /* Área de subida de múltiples imágenes */
+        .upload-area {
+            border: 2px dashed var(--af-gray);
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: all 0.2s;
+            min-height: 100px;
+        }
+        
+        .upload-area:hover {
+            border-color: var(--af-sky);
+            background: var(--af-gray);
+        }
+        
+        .images-preview {
+            margin-top: 15px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .image-preview-item {
+            position: relative;
+            width: 100px;
+            height: 100px;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 2px solid var(--af-gray);
+        }
+        
+        .image-preview-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .image-preview-item .btn-remove {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            background: rgba(220, 53, 69, 0.8);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .image-preview-item .btn-remove:hover {
+            background: #dc3545;
+        }
+        
+        /* Modal de detalle */
+        .detalle-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        
+        .detalle-item {
+            margin-bottom: 15px;
+        }
+        
+        .detalle-label {
+            font-weight: bold;
+            color: var(--af-navy);
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+        
+        .detalle-valor {
+            color: var(--af-dark-gray);
+            font-size: 14px;
+            margin-top: 5px;
+        }
+        
+        .detalle-imagenes {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .detalle-imagen {
+            width: 150px;
+            height: 150px;
+            object-fit: cover;
+            border-radius: 10px;
+            border: 2px solid var(--af-gray);
+            cursor: pointer;
+        }
+        
+        .full-width {
+            grid-column: span 2;
+        }
+        
+        .btn-small {
+            padding: 5px 12px;
+            margin: 0 3px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+        
+        .btn-danger-small {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .btn-secondary-small {
+            background: #6c757d;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- BARRA LATERAL -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-brand">
+    <img src="" alt="Logo" id="sidebarLogo">
+    <h3 id="sidebarNombre"></h3>
+    <p id="sidebarSubtitulo"></p>
+    <div class="logos-container">
+        <img src="" id="logo1">
+        <img src="" id="logo2">
+    </div>
+</div>
+        
+        <div class="sidebar-nav">
+            <div class="nav-item"><a href="pilotos.html" class="nav-link"><i class="fas fa-tachometer-alt"></i><span>Dashboard</span></a></div>
+            <div class="nav-item"><a href="pilotos-lista.html" class="nav-link"><i class="fas fa-users"></i><span>Pilotos</span></a></div>
+            <div class="nav-item"><a href="aeronaves.html" class="nav-link"><i class="fas fa-plane"></i><span>Aeronaves</span></a></div>
+            <div class="nav-item"><a href="libros-vuelo.html" class="nav-link active"><i class="fas fa-book"></i><span>Libros de Vuelo</span></a></div>
+            <div class="nav-item"><a href="solicitudes.html" class="nav-link"><i class="fas fa-clipboard-list"></i><span>Solicitudes</span></a></div>
+            <div class="nav-item" id="adminNavItem" style="display: none;">
+                <a href="admin.html" class="nav-link"><i class="fas fa-shield-alt"></i><span>Admin Panel</span></a>
+            </div>
+        </div>
+        
+        <div class="sidebar-profile">
+            <div class="profile-info" id="profileBtn">
+                <div class="profile-avatar" id="avatarInicial">
+                    <img id="avatarImg" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: none;">
+                    <span id="avatarTexto">CP</span>
+                </div>
+                <div class="profile-details">
+                    <div class="profile-name" id="profileName">Carlos Pérez</div>
+                    <div class="profile-rank" id="profileRank">Capitán</div>
+                </div>
+                <i class="fas fa-chevron-up" style="font-size: 12px;"></i>
+            </div>
+            <div class="profile-dropdown" id="profileDropdown">
+                <a href="#" class="dropdown-item" id="miPerfilBtn">
+                    <i class="fas fa-user-edit"></i>
+                    <span>Mi Perfil</span>
+                </a>
+                <a href="#" class="dropdown-item" id="cerrarSesionBtn">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Cerrar Sesión</span>
+                </a>
+            </div>
+        </div>
+    </aside>
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <main class="main-content" id="mainContent">
+        <div class="top-bar">
+            <button class="menu-toggle" id="menuToggle"><i class="fas fa-bars"></i></button>
+            <div class="breadcrumbs">
+                <a href="pilotos.html">Inicio</a>
+                <span>/</span>
+                <a href="libros-vuelo.html">Libros de Vuelo</a>
+                <span>/</span>
+                <span>Registros</span>
+            </div>
+        </div>
+        
+        <div class="page-container">
+            <h1 style="color: var(--af-navy); margin-bottom: 20px;">
+                <i class="fas fa-book-open"></i> Libros de Vuelo
+            </h1>
+            
+            <div class="filtros-bar">
+                <div class="filtro-group">
+                    <label><i class="fas fa-filter"></i> Mostrar:</label>
+                    <select id="filtroPiloto" onchange="cargarLibros()">
+                        <option value="todos">Todos los vuelos</option>
+                        <option value="mis-vuelos">Mis vuelos</option>
+                    </select>
+                </div>
+                <button class="btn-nuevo" onclick="abrirModal()">
+                    <i class="fas fa-plus"></i> Nuevo Registro
+                </button>
+            </div>
+            
+            <div id="alert" class="alert" style="display: none;"></div>
+            
+            <div class="tabla-vuelos">
+                <table id="tablaVuelos">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Piloto</th>
+                            <th>Aeronave</th>
+                            <th>Misión</th>
+                            <th>Hora Inicio</th>
+                            <th>Hora Fin</th>
+                            <th>Duración</th>
+                            <th>Observaciones</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaBody">
+                        <tr><td colspan="9" style="text-align: center;">Cargando...</tbody>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal Nuevo Registro -->
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-fighter-jet"></i> Nuevo Registro de Vuelo</h2>
+                <span class="close-modal" onclick="cerrarModal()">&times;</span>
+            </div>
+            <form id="formVuelo">
+                <div class="form-group">
+                    <label>Aeronave *</label>
+                    <select id="aeronave_id" required>
+                        <option value="">Selecciona una aeronave</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Fecha de Vuelo *</label>
+                    <input type="date" id="fecha_vuelo" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Hora Inicio *</label>
+                        <input type="time" id="hora_inicio" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Hora Fin *</label>
+                        <input type="time" id="hora_fin" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Tipo de Misión *</label>
+                    <select id="tipo_mision" required>
+                        <option value="">Selecciona un tipo</option>
+                        <option value="Combate">⚔️ Combate</option>
+                        <option value="Entrenamiento">🎯 Entrenamiento</option>
+                        <option value="Transporte">📦 Transporte</option>
+                        <option value="Reconocimiento">👁️ Reconocimiento</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Observaciones</label>
+                    <textarea id="observaciones" rows="3" placeholder="Notas adicionales..."></textarea>
+                </div>
+                
+                <!-- Campo de múltiples imágenes -->
+                <div class="form-group">
+                    <label><i class="fas fa-images"></i> Observaciones Gráficas (múltiples imágenes)</label>
+                    <div class="upload-area" id="uploadArea">
+                        <i class="fas fa-cloud-upload-alt" style="font-size: 24px;"></i>
+                        <p>Haz clic para seleccionar una o más imágenes</p>
+                        <p style="font-size: 12px;">(Puedes seleccionar varias imágenes a la vez)</p>
+                        <input type="file" id="imageInput" accept="image/*" multiple style="display: none;">
+                    </div>
+                    <div id="imagesPreview" class="images-preview"></div>
+                </div>
+                
+                <button type="submit" class="btn-guardar">Guardar Registro</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Detalle de Vuelo -->
+    <div id="modalDetalle" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-file-alt"></i> Detalle del Vuelo</h2>
+                <span class="close-modal" onclick="cerrarModalDetalle()">&times;</span>
+            </div>
+            <div id="detalleContent"></div>
+            <button class="btn-guardar" onclick="cerrarModalDetalle()" style="margin-top: 20px;">Cerrar</button>
+        </div>
+    </div>
+
+    <!-- Modal para ver imagen ampliada -->
+    <div id="modalImagen" class="modal">
+        <div class="modal-content" style="max-width: 90%; text-align: center;">
+            <div class="modal-header">
+                <h2><i class="fas fa-image"></i> Imagen</h2>
+                <span class="close-modal" onclick="cerrarModalImagen()">&times;</span>
+            </div>
+            <img id="imagenAmpliada" src="" style="max-width: 100%; max-height: 70vh;">
+        </div>
+    </div>
+    <!-- MODAL DE ALERTA PERSONALIZADO -->
+<div id="modalAlerta" class="modal" style="display: none; z-index: 10000;">
+    <div class="modal-content" style="max-width: 400px; text-align: center;">
+        <div class="modal-header">
+            <h2 id="alertaTitulo"><i class="fas fa-info-circle"></i> Aviso</h2>
+        </div>
+        <div style="padding: 20px;">
+            <p id="alertaMensaje">Mensaje de prueba</p>
+        </div>
+        <button id="btnCerrarAlerta" class="btn-guardar" style="background: var(--af-sky);">
+            <i class="fas fa-check"></i> Aceptar
+        </button>
+    </div>
+</div>
+
+<!-- MODAL DE SESIÓN EXPIRADA -->
+<div id="modalSesionExpirada" class="modal" style="display: none; z-index: 10000;">
+    <div class="modal-content" style="max-width: 400px; text-align: center;">
+        <div class="modal-header">
+            <h2><i class="fas fa-exclamation-triangle" style="color: #ffc107;"></i> Sesión Caducada</h2>
+        </div>
+        <div style="padding: 20px;">
+            <p>Tu cuenta ha sido desactivada o tu rol ha sido modificado por un administrador.</p>
+            <p>Debes <strong>volver a iniciar sesión</strong> para continuar.</p>
+            <p style="font-size: 12px; color: #999; margin-top: 15px;">Esta acción es obligatoria.</p>
+        </div>
+        <button id="btnCerrarSesionForzada" class="btn-guardar" style="background: #dc3545;">
+            <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
+        </button>
+    </div>
+</div>
+<script src="js/config.js"></script>
+
+    <script>
+        let pilotoActual = null;
+        let imagenesSeleccionadas = [];
+        
+        // Mostrar alerta personalizada
+function mostrarAlerta(mensaje, tipo = 'info') {
+    const modal = document.getElementById('modalAlerta');
+    const titulo = document.getElementById('alertaTitulo');
+    const mensajeEl = document.getElementById('alertaMensaje');
+    const btn = document.getElementById('btnCerrarAlerta');
+    
+    if (tipo === 'success') {
+        titulo.innerHTML = '<i class="fas fa-check-circle"></i> Éxito';
+        btn.style.background = '#28a745';
+    } else if (tipo === 'error') {
+        titulo.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Error';
+        btn.style.background = '#dc3545';
+    } else if (tipo === 'warning') {
+        titulo.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Advertencia';
+        btn.style.background = '#ffc107';
+        btn.style.color = '#333';
+    } else {
+        titulo.innerHTML = '<i class="fas fa-info-circle"></i> Aviso';
+        btn.style.background = 'var(--af-sky)';
+        btn.style.color = 'white';
+    }
+    
+    mensajeEl.textContent = mensaje;
+    modal.style.display = 'flex';
+    
+    // Cerrar al hacer clic en el botón
+    btn.onclick = function() {
+        modal.style.display = 'none';
+    };
+    
+    // No cerrar al hacer clic fuera
+    modal.onclick = function(event) {
+        if (event.target === modal) return;
+    };
+}
+        // ============================================
+        // VERIFICAR AUTENTICACIÓN
+        // ============================================
+        
+        function verificarAutenticacion() {
+    const token = localStorage.getItem('token');
+    const piloto = localStorage.getItem('piloto');
+    
+    if (!token || !piloto) {
+        window.location.href = 'index.html';
+        return false;
+    }
+    
+    pilotoActual = JSON.parse(piloto);
+    
+    document.getElementById('profileName').textContent = pilotoActual.nombre;
+    document.getElementById('profileRank').textContent = pilotoActual.grado;
+    
+    const iniciales = pilotoActual.nombre.split(' ').map(n => n[0]).join('').substring(0, 2);
+    const avatarImg = document.getElementById('avatarImg');
+    const avatarTexto = document.getElementById('avatarTexto');
+    
+    if (pilotoActual.foto_url && pilotoActual.foto_url !== '') {
+        let fotoUrl = pilotoActual.foto_url;
+        if (!fotoUrl.startsWith('http')) {
+            fotoUrl = `http://localhost:3000${fotoUrl}`;
+        }
+        avatarImg.style.display = 'block';
+        avatarTexto.style.display = 'none';
+        avatarImg.src = fotoUrl;
+    } else {
+        avatarImg.style.display = 'none';
+        avatarTexto.style.display = 'block';
+        avatarTexto.textContent = iniciales;
+    }
+    
+    // Mostrar Admin Panel si es Admin o Supervisor
+    if (pilotoActual.rol === 'Admin' || pilotoActual.rol === 'Supervisor') {
+        const adminNav = document.getElementById('adminNavItem');
+        if (adminNav) adminNav.style.display = 'block';
+    } else {
+        const adminNav = document.getElementById('adminNavItem');
+        if (adminNav) adminNav.style.display = 'none';
+    }
+    
+    // ============================================
+    // CONFIGURACIÓN DE LOGOS Y TÍTULOS DE LA ORGANIZACIÓN
+    // ============================================
+    
+    // Configurar logos de la sidebar
+    if (document.getElementById('sidebarLogo')) {
+        document.getElementById('sidebarLogo').src = ORG_CONFIG.logos.principal;
+        document.getElementById('sidebarNombre').textContent = ORG_CONFIG.nombre;
+        document.getElementById('sidebarSubtitulo').textContent = ORG_CONFIG.textos.sistema;
+        document.getElementById('logo1').src = ORG_CONFIG.logos.secundario1;
+        document.getElementById('logo2').src = ORG_CONFIG.logos.secundario2;
+    }
+    
+    // Configurar título de la página
+    document.title = `Libros de Vuelo - ${ORG_CONFIG.nombre}`;
+    
+    return true;
+}
+        
+        // ============================================
+        // CARGAR LIBROS DE VUELO
+        // ============================================
+        async function cambiarRol(id, nuevoRol) {
+    const token = localStorage.getItem('token');
+    const res = await fetch(`http://localhost:3000/api/admin/pilotos/${id}/rol`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ rol: nuevoRol })
+    });
+    
+    if (res.ok) {
+mostrarAlerta('Rol actualizado. El usuario debe volver a iniciar sesión para ver los cambios.', 'success');
+        // Si el usuario cambiado es el mismo que está logueado, cerrar sesión
+        const pilotoActual = JSON.parse(localStorage.getItem('piloto'));
+        if (pilotoActual.id === id) {
+            localStorage.clear();
+            window.location.href = 'index.html';
+        } else {
+            cargarPilotos();
+        }
+    } else {
+mostrarAlerta('Error al actualizar rol', 'error');
+    }
+}
+
+        async function cargarLibros() {
+            const token = localStorage.getItem('token');
+            const filtro = document.getElementById('filtroPiloto').value;
+            const esAdmin = pilotoActual.rol === 'Admin';
+            const esInstructor = pilotoActual.rol === 'Instructor';
+            const puedeVerDetalle = esAdmin || esInstructor;
+            
+            let url = 'http://localhost:3000/api/libros/';
+            if (filtro === 'mis-vuelos') {
+                url += 'mis-vuelos';
+            }
+            
+            try {
+                const response = await fetch(url, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (response.status === 401) {
+                    window.location.href = 'index.html';
+                    return;
+                }
+                
+                const data = await response.json();
+                const libros = filtro === 'mis-vuelos' ? data.misVuelos : data.libros;
+                
+                if (!libros || libros.length === 0) {
+                    document.getElementById('tablaBody').innerHTML = `
+                        <tr>
+                            <td colspan="9" style="text-align: center;">
+                                <div class="empty-state">
+                                    <i class="fas fa-book-open"></i>
+                                    <p>No hay registros de vuelo</p>
+                                    <button class="btn-nuevo" style="margin-top: 15px;" onclick="abrirModal()">+ Crear primer registro</button>
+                                </div>
+                              
+                          
+                    `;
+                    return;
+                }
+                
+                const html = libros.map(libro => {
+                    const duracion = calcularDuracion(libro.hora_inicio, libro.hora_fin);
+                    const btnEliminar = esAdmin ? `<button class="btn-eliminar" onclick="event.stopPropagation(); eliminarVuelo(${libro.id})"><i class="fas fa-trash"></i> Eliminar</button>` : '';
+                    const clickableClass = puedeVerDetalle ? 'clickable-row' : '';
+                    const onclickAttr = puedeVerDetalle ? `onclick="verDetalleVuelo(${libro.id})"` : '';
+                    
+                    return `
+                        <tr class="${clickableClass}" ${onclickAttr}>
+                            <td>${formatearFecha(libro.fecha_vuelo)}</td>
+                            <td>${libro.piloto_nombre || 'Yo'}</td>
+                            <td>${libro.aeronave_id}</td>
+                            <td><span class="badge-mision ${libro.tipo_mision}">${libro.tipo_mision}</span></td>
+                            <td>${libro.hora_inicio}</td>
+                            <td>${libro.hora_fin}</td>
+                            <td>${duracion}</td>
+                            <td>${libro.observaciones || '-'}</td>
+                            <td style="text-align: center;">${btnEliminar}  
+                          
+                    `;
+                }).join('');
+                
+                document.getElementById('tablaBody').innerHTML = html;
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('tablaBody').innerHTML = `
+                       <td colspan="9" style="text-align: center; color: red;">Error al cargar los registros</tbody>
+                `;
+            }
+        }
+        
+        // ============================================
+        // VER DETALLE DE VUELO
+        // ============================================
+        
+        async function verDetalleVuelo(id) {
+            const token = localStorage.getItem('token');
+            const esAdmin = pilotoActual.rol === 'Admin';
+            const esInstructor = pilotoActual.rol === 'Instructor';
+            const puedeVerDetalle = esAdmin || esInstructor;
+            
+            if (!puedeVerDetalle) {
+                mostrarAlerta('⚠️ Solo Administradores e Instructores pueden ver los detalles completos', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`http://localhost:3000/api/libros/`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+                const vuelo = data.libros.find(l => l.id === id);
+                
+                if (!vuelo) {
+                    mostrarAlerta('No se encontró el vuelo', 'error');
+                    return;
+                }
+                
+                const duracion = calcularDuracion(vuelo.hora_inicio, vuelo.hora_fin);
+                
+                let imagenesHtml = '';
+                if (vuelo.observaciones_graficas && Array.isArray(vuelo.observaciones_graficas) && vuelo.observaciones_graficas.length > 0) {
+                    imagenesHtml = `
+                        <div class="detalle-item full-width">
+                            <div class="detalle-label">📸 Imágenes de Observación (${vuelo.observaciones_graficas.length})</div>
+                            <div class="detalle-imagenes">
+                                ${vuelo.observaciones_graficas.map(img => `
+                                    <img src="http://localhost:3000${img}" class="detalle-imagen" onclick="verImagenAmpliada('http://localhost:3000${img}')">
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                } else if (vuelo.observaciones_graficas && typeof vuelo.observaciones_graficas === 'string' && vuelo.observaciones_graficas !== '') {
+                    imagenesHtml = `
+                        <div class="detalle-item full-width">
+                            <div class="detalle-label">📸 Imagen de Observación</div>
+                            <div class="detalle-imagenes">
+                                <img src="http://localhost:3000${vuelo.observaciones_graficas}" class="detalle-imagen" onclick="verImagenAmpliada('http://localhost:3000${vuelo.observaciones_graficas}')">
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                const detalleHtml = `
+                    <div class="detalle-grid">
+                        <div class="detalle-item">
+                            <div class="detalle-label">📅 Fecha</div>
+                            <div class="detalle-valor">${formatearFecha(vuelo.fecha_vuelo)}</div>
+                        </div>
+                        <div class="detalle-item">
+                            <div class="detalle-label">✈️ Aeronave</div>
+                            <div class="detalle-valor">${vuelo.aeronave_id}</div>
+                        </div>
+                        <div class="detalle-item">
+                            <div class="detalle-label">👨‍✈️ Piloto</div>
+                            <div class="detalle-valor">${vuelo.piloto_nombre || 'Yo'}</div>
+                        </div>
+                        <div class="detalle-item">
+                            <div class="detalle-label">🎯 Misión</div>
+                            <div class="detalle-valor">${vuelo.tipo_mision}</div>
+                        </div>
+                        <div class="detalle-item">
+                            <div class="detalle-label">⏰ Hora Inicio</div>
+                            <div class="detalle-valor">${vuelo.hora_inicio}</div>
+                        </div>
+                        <div class="detalle-item">
+                            <div class="detalle-label">⏰ Hora Fin</div>
+                            <div class="detalle-valor">${vuelo.hora_fin}</div>
+                        </div>
+                        <div class="detalle-item">
+                            <div class="detalle-label">⏱️ Duración</div>
+                            <div class="detalle-valor">${duracion}</div>
+                        </div>
+                        <div class="detalle-item full-width">
+                            <div class="detalle-label">📝 Observaciones</div>
+                            <div class="detalle-valor">${vuelo.observaciones || 'Sin observaciones'}</div>
+                        </div>
+                        ${imagenesHtml}
+                    </div>
+                `;
+                
+                document.getElementById('detalleContent').innerHTML = detalleHtml;
+                document.getElementById('modalDetalle').style.display = 'flex';
+            } catch (error) {
+                console.error('Error:', error);
+                mostrarAlerta('Error al cargar el detalle', 'error');
+            }
+        }
+        
+        function verImagenAmpliada(url) {
+            document.getElementById('imagenAmpliada').src = url;
+            document.getElementById('modalImagen').style.display = 'flex';
+        }
+        
+        function cerrarModalImagen() {
+            document.getElementById('modalImagen').style.display = 'none';
+        }
+        
+        function cerrarModalDetalle() {
+            document.getElementById('modalDetalle').style.display = 'none';
+        }
+        
+        // ============================================
+        // CÁLCULO DE DURACIÓN (CORREGIDO)
+        // ============================================
+        
+        function calcularDuracion(horaInicio, horaFin) {
+            const [h1, m1] = horaInicio.split(':');
+            const [h2, m2] = horaFin.split(':');
+            let minutosInicio = parseInt(h1) * 60 + parseInt(m1);
+            let minutosFin = parseInt(h2) * 60 + parseInt(m2);
+            
+            let duracionMinutos = minutosFin - minutosInicio;
+            
+            // Si pasa la medianoche, ajustar
+            if (duracionMinutos < 0) {
+                duracionMinutos += 24 * 60;
+            }
+            
+            const horas = Math.floor(duracionMinutos / 60);
+            const minutos = duracionMinutos % 60;
+            return `${horas}h ${minutos}m`;
+        }
+        
+        function formatearFecha(fecha) {
+            const date = new Date(fecha);
+            return date.toLocaleDateString('es-ES');
+        }
+        
+        // ============================================
+        // CARGAR AERONAVES AUTORIZADAS
+        // ============================================
+        
+        async function cargarAeronavesAutorizadas() {
+    const token = localStorage.getItem('token');
+    const pilotoId = pilotoActual.id;
+    
+    try {
+        const response = await fetch(`http://localhost:3000/api/admin/pilotos/${pilotoId}/aeronaves-autorizadas`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await response.json();
+        
+        const select = document.getElementById('aeronave_id');
+        if (data.aeronaves && data.aeronaves.length > 0) {
+            select.innerHTML = '<option value="">Selecciona una aeronave</option>';
+            data.aeronaves.forEach(a => {
+                const icono = a.certificada ? '✅' : '⏳';
+                select.innerHTML += `<option value="${a.id}">${a.id} - ${a.modelo} (${icono} ${a.estado_texto})</option>`;
+            });
+        } else {
+            select.innerHTML = '<option value="">No tienes aeronaves certificadas o aprobadas</option>';
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        const select = document.getElementById('aeronave_id');
+        select.innerHTML = '<option value="">Error al cargar aeronaves</option>';
+    }
+}
+        
+        // ============================================
+        // MANEJO DE MÚLTIPLES IMÁGENES
+        // ============================================
+        
+        function agregarImagenes(fileList) {
+            const previewContainer = document.getElementById('imagesPreview');
+            
+            for (const file of fileList) {
+                if (!file.type.startsWith('image/')) continue;
+                
+                const previewUrl = URL.createObjectURL(file);
+                const index = imagenesSeleccionadas.length;
+                
+                imagenesSeleccionadas.push({ file, previewUrl });
+                
+                const previewItem = document.createElement('div');
+                previewItem.className = 'image-preview-item';
+                previewItem.innerHTML = `
+                    <img src="${previewUrl}" alt="Vista previa">
+                    <button class="btn-remove" data-index="${index}">✕</button>
+                `;
+                
+                previewContainer.appendChild(previewItem);
+            }
+            
+            document.querySelectorAll('.btn-remove').forEach(btn => {
+                btn.removeEventListener('click', eliminarImagen);
+                btn.addEventListener('click', eliminarImagen);
+            });
+        }
+        
+        function eliminarImagen(e) {
+            const index = parseInt(e.target.getAttribute('data-index'));
+            if (!isNaN(index) && index >= 0 && index < imagenesSeleccionadas.length) {
+                URL.revokeObjectURL(imagenesSeleccionadas[index].previewUrl);
+                imagenesSeleccionadas.splice(index, 1);
+                
+                const previewContainer = document.getElementById('imagesPreview');
+                previewContainer.innerHTML = '';
+                
+                imagenesSeleccionadas.forEach((img, i) => {
+                    const previewItem = document.createElement('div');
+                    previewItem.className = 'image-preview-item';
+                    previewItem.innerHTML = `
+                        <img src="${img.previewUrl}" alt="Vista previa">
+                        <button class="btn-remove" data-index="${i}">✕</button>
+                    `;
+                    previewContainer.appendChild(previewItem);
+                });
+                
+                document.querySelectorAll('.btn-remove').forEach(btn => {
+                    btn.removeEventListener('click', eliminarImagen);
+                    btn.addEventListener('click', eliminarImagen);
+                });
+            }
+        }
+        
+        function limpiarImagenes() {
+            imagenesSeleccionadas.forEach(img => {
+                URL.revokeObjectURL(img.previewUrl);
+            });
+            imagenesSeleccionadas = [];
+            document.getElementById('imagesPreview').innerHTML = '';
+        }
+        
+        async function subirMultiplesImagenes(files) {
+            const formData = new FormData();
+            for (const item of files) {
+                formData.append('imagenes', item.file);
+            }
+            const token = localStorage.getItem('token');
+            
+            try {
+                const response = await fetch('http://localhost:3000/api/admin/upload/observaciones', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    body: formData
+                });
+                
+                const result = await response.json();
+                if (response.ok) {
+                    return result.urls;
+                } else {
+                    throw new Error('Error al subir imágenes');
+                }
+            } catch (error) {
+                throw error;
+            }
+        }
+        
+        // ============================================
+        // ELIMINAR VUELO
+        // ============================================
+        
+        async function eliminarVuelo(id) {
+            if (!confirm('¿Estás seguro de eliminar este registro de vuelo?')) return;
+            
+            const token = localStorage.getItem('token');
+            try {
+                const response = await fetch(`http://localhost:3000/api/libros/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (response.ok) {
+                    mostrarAlerta('✅ Registro de vuelo eliminado', 'success');
+                    cargarLibros();
+                } else {
+                    mostrarAlerta('❌ Error al eliminar', 'error');
+                }
+            } catch (error) {
+                mostrarAlerta('❌ Error al eliminar', 'error');
+            }
+        }
+        
+        function mostrarAlerta(mensaje, tipo) {
+            const alert = document.getElementById('alert');
+            alert.className = `alert alert-${tipo}`;
+            alert.textContent = mensaje;
+            alert.style.display = 'block';
+            setTimeout(() => {
+                alert.style.display = 'none';
+            }, 3000);
+        }
+        
+        // ============================================
+        // MODAL
+        // ============================================
+        
+        function abrirModal() {
+            document.getElementById('modal').style.display = 'flex';
+            cargarAeronavesAutorizadas();
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('fecha_vuelo').value = today;
+            limpiarImagenes();
+            setupUploadArea();
+        }
+        
+        function cerrarModal() {
+            document.getElementById('modal').style.display = 'none';
+            document.getElementById('formVuelo').reset();
+            limpiarImagenes();
+        }
+        
+        function setupUploadArea() {
+            const uploadArea = document.getElementById('uploadArea');
+            const fileInput = document.getElementById('imageInput');
+            
+            const newUploadArea = uploadArea.cloneNode(true);
+            uploadArea.parentNode.replaceChild(newUploadArea, uploadArea);
+            
+            const newFileInput = newUploadArea.querySelector('#imageInput');
+            
+            newUploadArea.addEventListener('click', () => {
+                newFileInput.click();
+            });
+            
+            newFileInput.addEventListener('change', (e) => {
+                if (e.target.files && e.target.files.length > 0) {
+                    agregarImagenes(e.target.files);
+                }
+                newFileInput.value = '';
+            });
+            
+            document.getElementById('uploadArea').id = 'uploadArea';
+            document.getElementById('imageInput').id = 'imageInput';
+        }
+        
+        // ============================================
+        // ENVÍO DE FORMULARIO
+        // ============================================
+        
+        document.getElementById('formVuelo').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const token = localStorage.getItem('token');
+            
+            const aeronave_id = document.getElementById('aeronave_id').value;
+            const fecha_vuelo = document.getElementById('fecha_vuelo').value;
+            const hora_inicio = document.getElementById('hora_inicio').value;
+            const hora_fin = document.getElementById('hora_fin').value;
+            const tipo_mision = document.getElementById('tipo_mision').value;
+            const observaciones = document.getElementById('observaciones').value;
+            
+            if (!aeronave_id || !fecha_vuelo || !hora_inicio || !hora_fin || !tipo_mision) {
+                mostrarAlerta('❌ Todos los campos obligatorios deben estar llenos', 'error');
+                return;
+            }
+            
+            if (hora_inicio >= hora_fin) {
+                mostrarAlerta('❌ La hora de fin debe ser posterior a la hora de inicio', 'error');
+                return;
+            }
+            
+            const btnSubmit = document.querySelector('#formVuelo .btn-guardar');
+            const originalText = btnSubmit.innerHTML;
+            btnSubmit.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Guardando...';
+            btnSubmit.disabled = true;
+            
+            try {
+                let observaciones_graficas = [];
+                if (imagenesSeleccionadas.length > 0) {
+                    observaciones_graficas = await subirMultiplesImagenes(imagenesSeleccionadas);
+                }
+                
+                const data = {
+                    aeronave_id: aeronave_id,
+                    fecha_vuelo: fecha_vuelo,
+                    hora_inicio: hora_inicio,
+                    hora_fin: hora_fin,
+                    tipo_mision: tipo_mision,
+                    observaciones: observaciones,
+                    observaciones_graficas: observaciones_graficas
+                };
+                
+                const response = await fetch('http://localhost:3000/api/libros/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    mostrarAlerta('✅ Registro de vuelo guardado exitosamente', 'success');
+                    setTimeout(() => {
+                        cerrarModal();
+                        cargarLibros();
+                    }, 1500);
+                } else {
+                    mostrarAlerta('❌ Error: ' + (result.mensaje || 'No se pudo guardar'), 'error');
+                    btnSubmit.innerHTML = originalText;
+                    btnSubmit.disabled = false;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                mostrarAlerta('❌ Error al guardar el registro', 'error');
+                btnSubmit.innerHTML = originalText;
+                btnSubmit.disabled = false;
+            }
+        });
+        
+        // ============================================
+        // NAVEGACIÓN Y EVENTOS
+        // ============================================
+        
+        function cerrarSesion() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('piloto');
+            window.location.href = 'index.html';
+        }
+        
+        function toggleMobileMenu() {
+            document.getElementById('sidebar').classList.toggle('mobile-open');
+        }
+        
+        function toggleProfileDropdown() {
+            document.getElementById('profileDropdown').classList.toggle('show');
+        }
+        
+        function closeDropdownOnClickOutside(event) {
+            const profileBtn = document.getElementById('profileBtn');
+            const dropdown = document.getElementById('profileDropdown');
+            if (!profileBtn.contains(event.target) && !dropdown.contains(event.target)) {
+                dropdown.classList.remove('show');
+            }
+        }
+        
+        async function editarMiPerfil() {
+            window.location.href = 'admin.html';
+        }
+        
+        document.getElementById('menuToggle').addEventListener('click', toggleMobileMenu);
+        document.getElementById('profileBtn').addEventListener('click', toggleProfileDropdown);
+        document.getElementById('miPerfilBtn').addEventListener('click', editarMiPerfil);
+        document.getElementById('cerrarSesionBtn').addEventListener('click', cerrarSesion);
+        document.addEventListener('click', closeDropdownOnClickOutside);
+        
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                cerrarModal();
+                cerrarModalDetalle();
+                cerrarModalImagen();
+            }
+        });
+        
+        window.addEventListener('click', function(event) {
+            const modal = document.getElementById('modal');
+            const modalDetalle = document.getElementById('modalDetalle');
+            const modalImagen = document.getElementById('modalImagen');
+            if (event.target === modal) {
+                cerrarModal();
+            }
+            if (event.target === modalDetalle) {
+                cerrarModalDetalle();
+            }
+            if (event.target === modalImagen) {
+                cerrarModalImagen();
+            }
+        });
+        
+        if (verificarAutenticacion()) {
+            cargarLibros();
+        }
+
+        if (verificarAutenticacion()) {
+            
+            iniciarVerificacionPeriodica();
+        }
+
+        // Función para verificar rol y estado periódicamente
+function iniciarVerificacionPeriodica() {
+    console.log('🟢 Verificación periódica iniciada');
+    
+    setInterval(async () => {
+        console.log('🔍 Ejecutando verificación...');
+        const token = localStorage.getItem('token');
+        const piloto = localStorage.getItem('piloto');
+        if (!token || !piloto) return;
+        
+        const pilotoData = JSON.parse(piloto);
+        console.log('Usuario:', pilotoData.id, 'Rol:', pilotoData.rol);
+        
+        // No verificar al Admin para evitar molestias
+        if (pilotoData.rol === 'Admin') {
+            console.log('Es Admin, omitiendo verificación');
+            return;
+        }
+        
+        try {
+            const response = await fetch(`http://localhost:3000/api/pilotos/${pilotoData.id}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                console.log('Respuesta:', data);
+                const activoEnBD = data.piloto?.activo;
+                const rolEnBD = data.piloto?.rol;
+                
+                // Verificar si fue archivado
+                if (activoEnBD === 0) {
+                    console.log('⚠️ USUARIO ARCHIVADO!');
+                    mostrarModalSesionExpirada('Su cuenta ha sido desactivada. Ya no pertenece a la Fuerza Aérea de LSAF.');
+                    return;
+                }
+                
+                // Verificar cambio de rol
+                if (rolEnBD && rolEnBD !== pilotoData.rol) {
+                    console.log('⚠️ ROL CAMBIADO!');
+                    mostrarModalSesionExpirada('Su rol ha sido modificado. Debe volver a iniciar sesión.');
+                }
+            }
+        } catch (error) {
+            console.error('Error:', error);
+        }
+    }, 10000);
+}
+
+// Llamar a la función después de verificar autenticación
+// Agrega esta línea al final del init() o después de verificarAutenticacion()
+iniciarVerificacionPeriodica();
+
+
+function mostrarModalSesionExpirada(mensajePersonalizado = null) {
+    console.log('📢 Mostrando modal de sesión expirada');
+    const modal = document.getElementById('modalSesionExpirada');
+    const mensajeEl = document.getElementById('modalSesionMensaje');
+    
+    if (modal) {
+        if (mensajePersonalizado) {
+            if (mensajeEl) mensajeEl.textContent = mensajePersonalizado;
+        } else {
+            if (mensajeEl) mensajeEl.textContent = 'Tu cuenta ha sido desactivada o tu rol ha sido modificado por un administrador.';
+        }
+        modal.style.display = 'flex';
+        
+        // No permitir cerrar haciendo clic fuera
+        modal.onclick = function(event) {
+            if (event.target === modal) return;
+        };
+        
+        const btnCerrar = document.getElementById('btnCerrarSesionForzada');
+        if (btnCerrar) {
+            btnCerrar.onclick = function() {
+                console.log('Cerrando sesión forzadamente');
+                localStorage.clear();
+                window.location.href = 'index.html';
+            };
+        }
+    } else {
+        console.error('Modal no encontrado');
+        alert(mensajePersonalizado || 'Tu sesión ha expirado. Debes volver a iniciar sesión.');
+        localStorage.clear();
+        window.location.href = 'index.html';
+    }
+}
+    </script>
+</body>
+</html>

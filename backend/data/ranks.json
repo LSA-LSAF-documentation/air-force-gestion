@@ -1,0 +1,99 @@
+{
+  "ranks": [
+    {
+      "code": "Amn",
+      "name": "Aviador",
+      "order": 19
+    },
+    {
+      "code": "A1C",
+      "name": "Aviador de primera",
+      "order": 18
+    },
+    {
+      "code": "SrA",
+      "name": "Aviador Mayor",
+      "order": 17
+    },
+    {
+      "code": "SSgt",
+      "name": "Sargento de personal",
+      "order": 16
+    },
+    {
+      "code": "TSgt",
+      "name": "Sargento Técnico",
+      "order": 15
+    },
+    {
+      "code": "MSgt",
+      "name": "Sargento Maestre",
+      "order": 14
+    },
+    {
+      "code": "SMSgt",
+      "name": "Sargento Maestre Mayor",
+      "order": 13
+    },
+    {
+      "code": "CMSgt",
+      "name": "Sargento Maestre de la Fuerza Aérea",
+      "order": 12
+    },
+    {
+      "code": "CMSAF",
+      "name": "Suboficial Mayor de la Fuerza Aérea",
+      "order": 11
+    },
+    {
+      "code": "2d Lt",
+      "name": "Teniente Segundo",
+      "order": 10
+    },
+    {
+      "code": "1st Lt",
+      "name": "Teniente Primero",
+      "order": 9
+    },
+    {
+      "code": "Capt",
+      "name": "Capitán",
+      "order": 8
+    },
+    {
+      "code": "Maj",
+      "name": "Major",
+      "order": 7
+    },
+    {
+      "code": "Lt Col",
+      "name": "Teniente Coronel",
+      "order": 6
+    },
+    {
+      "code": "Col",
+      "name": "Coronel",
+      "order": 5
+    },
+    {
+      "code": "Brig Gen",
+      "name": "Brigadier General",
+      "order": 4
+    },
+    {
+      "code": "Maj Gen",
+      "name": "Mayor General",
+      "order": 3
+    },
+    {
+      "code": "Lt Gen",
+      "name": "Teniente General",
+      "order": 2
+    },
+    {
+      "code": "Gen",
+      "name": "General",
+      "order": 1
+    }
+  ]
+}
