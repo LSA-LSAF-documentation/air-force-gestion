@@ -361,279 +361,308 @@
     </div>
     <script src="js/config.js"></script>
 
-<script>
-    // URL base de la API
-    const API_BASE_URL = 'https://air-force-gestion.onrender.com';
+    <script>
+        const API_BASE_URL = 'https://air-force-gestion.onrender.com';
 
-    // Mostrar alerta personalizada
-    function mostrarAlerta(mensaje, tipo = 'info') {
-        const modal = document.getElementById('modalAlerta');
-        const titulo = document.getElementById('alertaTitulo');
-        const mensajeEl = document.getElementById('alertaMensaje');
-        const btn = document.getElementById('btnCerrarAlerta');
-        
-        if (tipo === 'success') {
-            titulo.innerHTML = '<i class="fas fa-check-circle"></i> Éxito';
-            btn.style.background = '#28a745';
-        } else if (tipo === 'error') {
-            titulo.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Error';
-            btn.style.background = '#dc3545';
-        } else if (tipo === 'warning') {
-            titulo.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Advertencia';
-            btn.style.background = '#ffc107';
-            btn.style.color = '#333';
-        } else {
-            titulo.innerHTML = '<i class="fas fa-info-circle"></i> Aviso';
-            btn.style.background = 'var(--af-sky)';
-            btn.style.color = 'white';
-        }
-        
-        mensajeEl.textContent = mensaje;
-        modal.style.display = 'flex';
-        
-        btn.onclick = function() {
-            modal.style.display = 'none';
-        };
-        
-        modal.onclick = function(event) {
-            if (event.target === modal) return;
-        };
-    }
-
-    function mostrarModalSesionExpirada(mensajePersonalizado = null) {
-        console.log('📢 Mostrando modal de sesión expirada');
-        const modal = document.getElementById('modalSesionExpirada');
-        const mensajeEl = document.getElementById('modalSesionMensaje');
-        
-        if (modal) {
-            if (mensajePersonalizado) {
-                if (mensajeEl) mensajeEl.textContent = mensajePersonalizado;
+        // Mostrar alerta personalizada
+        function mostrarAlerta(mensaje, tipo = 'info') {
+            const modal = document.getElementById('modalAlerta');
+            const titulo = document.getElementById('alertaTitulo');
+            const mensajeEl = document.getElementById('alertaMensaje');
+            const btn = document.getElementById('btnCerrarAlerta');
+            
+            if (tipo === 'success') {
+                titulo.innerHTML = '<i class="fas fa-check-circle"></i> Éxito';
+                btn.style.background = '#28a745';
+            } else if (tipo === 'error') {
+                titulo.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Error';
+                btn.style.background = '#dc3545';
+            } else if (tipo === 'warning') {
+                titulo.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Advertencia';
+                btn.style.background = '#ffc107';
+                btn.style.color = '#333';
             } else {
-                if (mensajeEl) mensajeEl.textContent = 'Tu cuenta ha sido desactivada o tu rol ha sido modificado por un administrador.';
+                titulo.innerHTML = '<i class="fas fa-info-circle"></i> Aviso';
+                btn.style.background = 'var(--af-sky)';
+                btn.style.color = 'white';
             }
+            
+            mensajeEl.textContent = mensaje;
             modal.style.display = 'flex';
+            
+            btn.onclick = function() {
+                modal.style.display = 'none';
+            };
             
             modal.onclick = function(event) {
                 if (event.target === modal) return;
             };
+        }
+
+        function mostrarModalSesionExpirada(mensajePersonalizado = null) {
+            console.log('📢 Mostrando modal de sesión expirada');
+            const modal = document.getElementById('modalSesionExpirada');
+            const mensajeEl = document.getElementById('modalSesionMensaje');
             
-            const btnCerrar = document.getElementById('btnCerrarSesionForzada');
-            if (btnCerrar) {
-                btnCerrar.onclick = function() {
-                    console.log('Cerrando sesión forzadamente');
-                    localStorage.clear();
-                    window.location.href = 'index.html';
+            if (modal) {
+                if (mensajePersonalizado) {
+                    if (mensajeEl) mensajeEl.textContent = mensajePersonalizado;
+                } else {
+                    if (mensajeEl) mensajeEl.textContent = 'Tu cuenta ha sido desactivada o tu rol ha sido modificado por un administrador.';
+                }
+                modal.style.display = 'flex';
+                
+                modal.onclick = function(event) {
+                    if (event.target === modal) return;
                 };
+                
+                const btnCerrar = document.getElementById('btnCerrarSesionForzada');
+                if (btnCerrar) {
+                    btnCerrar.onclick = function() {
+                        console.log('Cerrando sesión forzadamente');
+                        localStorage.clear();
+                        window.location.href = 'index.html';
+                    };
+                }
+            } else {
+                console.error('Modal no encontrado');
+                alert(mensajePersonalizado || 'Tu sesión ha expirado. Debes volver a iniciar sesión.');
+                localStorage.clear();
+                window.location.href = 'index.html';
             }
-        } else {
-            console.error('Modal no encontrado');
-            alert(mensajePersonalizado || 'Tu sesión ha expirado. Debes volver a iniciar sesión.');
-            localStorage.clear();
-            window.location.href = 'index.html';
         }
+
+        let pilotoActual = null;
+
+        // ============================================
+        // FUNCIONES DE AUTENTICACIÓN
+        // ============================================
+
+        function verificarAutenticacion() {
+    const token = localStorage.getItem('token');
+    const piloto = localStorage.getItem('piloto');
+    
+    if (!token || !piloto) {
+        window.location.href = 'index.html';
+        return false;
     }
-
-    let pilotoActual = null;
-
-    // ============================================
-    // FUNCIONES DE AUTENTICACIÓN
-    // ============================================
-
-    function verificarAutenticacion() {
-        const token = localStorage.getItem('token');
-        const pilotoData = localStorage.getItem('piloto');
-        
-        if (!token || !pilotoData) {
-            window.location.href = 'index.html';
-            return false;
+    
+    pilotoActual = JSON.parse(piloto);
+    
+    document.getElementById('welcomeName').textContent = pilotoActual.nombre;
+    document.getElementById('profileName').textContent = pilotoActual.nombre;
+    document.getElementById('profileRank').textContent = pilotoActual.grado;
+    document.getElementById('userGrado').textContent = pilotoActual.grado;
+    document.getElementById('userID').textContent = `ID: ${pilotoActual.id}`;
+    
+    const iniciales = pilotoActual.nombre.split(' ').map(n => n[0]).join('').substring(0, 2);
+    const avatarImg = document.getElementById('avatarImg');
+    const avatarTexto = document.getElementById('avatarTexto');
+    
+    if (pilotoActual.foto_url && pilotoActual.foto_url !== '') {
+        let fotoUrl = pilotoActual.foto_url;
+        if (!fotoUrl.startsWith('http')) {
+            fotoUrl = `http://localhost:3000${fotoUrl}`;
         }
-        
-        pilotoActual = JSON.parse(pilotoData);
-        
-        document.getElementById('welcomeName').textContent = pilotoActual.nombre;
-        document.getElementById('profileName').textContent = pilotoActual.nombre;
-        document.getElementById('profileRank').textContent = pilotoActual.grado;
-        document.getElementById('userGrado').textContent = pilotoActual.grado;
-        document.getElementById('userID').textContent = `ID: ${pilotoActual.id}`;
-        
-        const iniciales = pilotoActual.nombre.split(' ').map(n => n[0]).join('').substring(0, 2);
-        const avatarImg = document.getElementById('avatarImg');
-        const avatarTexto = document.getElementById('avatarTexto');
-        
-        if (pilotoActual.foto_url && pilotoActual.foto_url !== '') {
-            let fotoUrl = pilotoActual.foto_url;
-            if (!fotoUrl.startsWith('http')) {
-                fotoUrl = `${API_BASE_URL}${fotoUrl}`;
-            }
-            avatarImg.style.display = 'block';
-            avatarTexto.style.display = 'none';
-            avatarImg.src = fotoUrl;
-            avatarImg.onerror = () => {
-                avatarImg.style.display = 'none';
-                avatarTexto.style.display = 'block';
-                avatarTexto.textContent = iniciales;
-            };
-        } else {
+        avatarImg.style.display = 'block';
+        avatarTexto.style.display = 'none';
+        avatarImg.src = fotoUrl;
+        avatarImg.onerror = () => {
             avatarImg.style.display = 'none';
             avatarTexto.style.display = 'block';
             avatarTexto.textContent = iniciales;
-        }
-        
-        if (pilotoActual.rol === 'Admin' || pilotoActual.rol === 'Supervisor') {
-            const adminNav = document.getElementById('adminNavItem');
-            if (adminNav) adminNav.style.display = 'block';
-        }
-        
-        // Configurar logos
-        if (typeof ORG_CONFIG !== 'undefined') {
-            if (document.getElementById('sidebarLogo')) {
-                document.getElementById('sidebarLogo').src = ORG_CONFIG.logos.principal;
-                document.getElementById('sidebarNombre').textContent = ORG_CONFIG.nombre;
-                document.getElementById('sidebarSubtitulo').textContent = ORG_CONFIG.textos.sistema;
-                document.getElementById('logo1').src = ORG_CONFIG.logos.secundario1;
-                document.getElementById('logo2').src = ORG_CONFIG.logos.secundario2;
-            }
-            document.title = `Dashboard - ${ORG_CONFIG.nombre}`;
-        }
-        
-        return true;
+        };
+    } else {
+        avatarImg.style.display = 'none';
+        avatarTexto.style.display = 'block';
+        avatarTexto.textContent = iniciales;
     }
-
+    
+    if (pilotoActual.rol === 'Admin' || pilotoActual.rol === 'Supervisor') {
+        const adminNav = document.getElementById('adminNavItem');
+        if (adminNav) adminNav.style.display = 'block';
+    } else {
+        const adminNav = document.getElementById('adminNavItem');
+        if (adminNav) adminNav.style.display = 'none';
+    }
+    
     // ============================================
-    // CARGAR ESTADÍSTICAS
+    // CONFIGURACIÓN DE LOGOS Y TÍTULOS DE LA ORGANIZACIÓN
     // ============================================
+    
+    // Configurar logos de la sidebar
+    if (document.getElementById('sidebarLogo')) {
+        document.getElementById('sidebarLogo').src = ORG_CONFIG.logos.principal;
+        document.getElementById('sidebarNombre').textContent = ORG_CONFIG.nombre;
+        document.getElementById('sidebarSubtitulo').textContent = ORG_CONFIG.textos.sistema;
+        document.getElementById('logo1').src = ORG_CONFIG.logos.secundario1;
+        document.getElementById('logo2').src = ORG_CONFIG.logos.secundario2;
+    }
+    
+    // Configurar título de la página
+    document.title = `Dashboard - ${ORG_CONFIG.nombre}`;
+    
+    return true;
+}
 
-    async function cargarEstadisticas() {
-        if (!pilotoActual || !pilotoActual.id) return;
-        
-        const token = localStorage.getItem('token');
-        if (!token) return;
-        
-        document.getElementById('totalHoras').textContent = '0';
-        document.getElementById('totalVuelos').textContent = '0';
-        document.getElementById('totalCertificaciones').textContent = '0';
-        
+        // ============================================
+        // CARGAR ESTADÍSTICAS
+        // ============================================
+
+        async function cargarEstadisticas() {
+    if (!pilotoActual || !pilotoActual.id) {
+        console.log('Esperando a que pilotoActual esté disponible...');
+        return;
+    }
+    
+    const token = localStorage.getItem('token');
+    
+    // Verificar que el token existe
+    if (!token) {
+        console.log('No hay token');
+        return;
+    }
+    
+    console.log('Token existe, longitud:', token.length);
+    
+    const esAdmin = pilotoActual.rol === 'Admin';
+    const esInstructor = pilotoActual.rol === 'Instructor';
+    const esSupervisor = pilotoActual.rol === 'Supervisor';
+    const puedeVerCertificaciones = esAdmin || esInstructor || esSupervisor;
+    
+    document.getElementById('totalHoras').textContent = '0';
+    document.getElementById('totalVuelos').textContent = '0';
+    document.getElementById('totalCertificaciones').textContent = puedeVerCertificaciones ? '0' : '🔒';
+    
+    try {
+        // Horas de vuelo
         try {
-            // Horas de vuelo
-            try {
-                const horasResponse = await fetch(`${API_BASE_URL}/api/pilotos/${pilotoActual.id}/horas-vuelo`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                
-                if (horasResponse.ok) {
-                    const horasData = await horasResponse.json();
-                    let totalHoras = 0;
-                    if (horasData.horas && horasData.horas.length > 0) {
-                        totalHoras = horasData.horas.reduce((sum, h) => sum + (h.horas_totales || 0), 0);
-                    }
-                    document.getElementById('totalHoras').textContent = totalHoras.toFixed(1);
-                }
-            } catch (e) {
-                console.error('Error en horas:', e);
-            }
+            const horasResponse = await fetch(`${API_BASE_URL}/api/pilotos/${pilotoActual.id}/horas-vuelo`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
             
-            // Total de vuelos
-            try {
-                const librosResponse = await fetch(`${API_BASE_URL}/api/libros/mis-vuelos`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                
-                if (librosResponse.ok) {
-                    const librosData = await librosResponse.json();
-                    const totalVuelos = librosData.misVuelos ? librosData.misVuelos.length : 0;
-                    document.getElementById('totalVuelos').textContent = totalVuelos;
-                }
-            } catch (e) {
-                console.error('Error en vuelos:', e);
-            }
+            console.log('Horas response status:', horasResponse.status);
             
-        } catch (error) {
-            console.error('Error general en estadísticas:', error);
+            if (horasResponse.ok) {
+                const horasData = await horasResponse.json();
+                let totalHoras = 0;
+                if (horasData.horas && horasData.horas.length > 0) {
+                    totalHoras = horasData.horas.reduce((sum, h) => sum + h.horas_totales, 0);
+                }
+                document.getElementById('totalHoras').textContent = totalHoras.toFixed(1);
+            } else if (horasResponse.status === 403) {
+                console.log('Error 403 en horas-vuelo - Token puede ser inválido');
+                // Intentar renovar sesión o redirigir
+            }
+        } catch (e) {
+            console.error('Error en horas:', e);
         }
-    }
-
-    // ============================================
-    // VERIFICACIÓN PERIÓDICA
-    // ============================================
-
-    function iniciarVerificacionPeriodica() {
-        setInterval(async () => {
-            if (!pilotoActual || !pilotoActual.id) return;
-            const token = localStorage.getItem('token');
-            if (!token || pilotoActual.rol === 'Admin') return;
+        
+        // Total de vuelos
+        try {
+            const librosResponse = await fetch(`${API_BASE_URL}/api/libros/mis-vuelos`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
             
-            try {
-                const response = await fetch(`${API_BASE_URL}/api/pilotos/${pilotoActual.id}`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
+            if (librosResponse.ok) {
+                const librosData = await librosResponse.json();
+                const totalVuelos = librosData.misVuelos ? librosData.misVuelos.length : 0;
+                document.getElementById('totalVuelos').textContent = totalVuelos;
+            }
+        } catch (e) {
+            console.error('Error en vuelos:', e);
+        }
+        
+    } catch (error) {
+        console.error('Error general en estadísticas:', error);
+    }
+}
+
+        // ============================================
+        // VERIFICACIÓN PERIÓDICA
+        // ============================================
+
+        function iniciarVerificacionPeriodica() {
+            console.log('🟢 Verificación periódica iniciada');
+            
+            setInterval(async () => {
+                if (!pilotoActual || !pilotoActual.id) return;
                 
-                if (response.ok) {
-                    const data = await response.json();
-                    const activoEnBD = data.piloto?.activo;
-                    const rolEnBD = data.piloto?.rol;
+                const token = localStorage.getItem('token');
+                if (!token) return;
+                if (pilotoActual.rol === 'Admin') return;
+                
+                try {
+                    const response = await fetch(`/api/pilotos/${pilotoActual.id}`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
                     
-                    if (activoEnBD === 0) {
-                        mostrarModalSesionExpirada('Su cuenta ha sido desactivada.');
-                    } else if (rolEnBD && rolEnBD !== pilotoActual.rol) {
-                        mostrarModalSesionExpirada('Su rol ha sido modificado.');
+                    if (response.ok) {
+                        const data = await response.json();
+                        const activoEnBD = data.piloto?.activo;
+                        const rolEnBD = data.piloto?.rol;
+                        
+                        if (activoEnBD === 0) {
+                            mostrarModalSesionExpirada('Su cuenta ha sido desactivada. Ya no pertenece a la Fuerza Aérea de LSAF.');
+                        } else if (rolEnBD && rolEnBD !== pilotoActual.rol) {
+                            mostrarModalSesionExpirada('Su rol ha sido modificado. Debe volver a iniciar sesión.');
+                        }
                     }
+                } catch (error) {
+                    console.error('Error en verificación periódica:', error);
                 }
-            } catch (error) {
-                console.error('Error en verificación:', error);
-            }
-        }, 10000);
-    }
+            }, 10000);
+        }
 
-    // ============================================
-    // SUBIR IMAGEN
-    // ============================================
+        // ============================================
+        // SUBIR IMAGEN
+        // ============================================
 
-    async function subirImagen(endpoint, file, id, previewElement, progressElement, inputUrlElement) {
-        const formData = new FormData();
-        formData.append('imagen', file);
-        const token = localStorage.getItem('token');
-        
-        return new Promise((resolve, reject) => {
-            const xhr = new XMLHttpRequest();
-            xhr.open('POST', `${API_BASE_URL}/api/admin/upload/${endpoint}/${id}`, true);
-            xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+        async function subirImagen(endpoint, file, id, previewElement, progressElement, inputUrlElement) {
+            const formData = new FormData();
+            formData.append('imagen', file);
+            const token = localStorage.getItem('token');
             
-            xhr.upload.onprogress = function(e) {
-                if (e.lengthComputable && progressElement) {
-                    progressElement.value = (e.loaded / e.total) * 100;
-                }
-            };
-            
-            xhr.onload = function() {
-                if (xhr.status === 200) {
-                    const response = JSON.parse(xhr.responseText);
-                    if (inputUrlElement) inputUrlElement.value = response.url;
-                    if (previewElement) {
-                        previewElement.style.display = 'block';
-                        const img = previewElement.querySelector('img');
-                        if (img) img.src = response.url;
+            return new Promise((resolve, reject) => {
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', `/api/admin/upload/${endpoint}/${id}`, true);
+                xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+                
+                xhr.upload.onprogress = function(e) {
+                    if (e.lengthComputable && progressElement) {
+                        progressElement.value = (e.loaded / e.total) * 100;
                     }
-                    resolve(response);
-                } else {
-                    reject(new Error('Error al subir imagen'));
-                }
-            };
+                };
+                
+                xhr.onload = function() {
+                    if (xhr.status === 200) {
+                        const response = JSON.parse(xhr.responseText);
+                        if (inputUrlElement) inputUrlElement.value = response.url;
+                        if (previewElement) {
+                            previewElement.style.display = 'block';
+                            const img = previewElement.querySelector('img');
+                            if (img) img.src = response.url;
+                        }
+                        resolve(response);
+                    } else {
+                        reject(new Error('Error al subir imagen'));
+                    }
+                };
+                
+                xhr.onerror = () => reject(new Error('Error de conexión'));
+                xhr.send(formData);
+            });
+        }
+
+        // ============================================
+        // EDITAR PERFIL
+        // ============================================
+
+        async function editarMiPerfil() {
+            const token = localStorage.getItem('token');
+            const id = pilotoActual.id;
             
-            xhr.onerror = () => reject(new Error('Error de conexión'));
-            xhr.send(formData);
-        });
-    }
-
-    // ============================================
-    // EDITAR PERFIL
-    // ============================================
-
-    async function editarMiPerfil() {
-        const token = localStorage.getItem('token');
-        const id = pilotoActual.id;
-        
-        try {
-            const res = await fetch(`${API_BASE_URL}/api/admin/pilotos/${id}`, {
+            const res = await fetch(`/api/admin/pilotos/${id}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const data = await res.json();
@@ -645,28 +674,66 @@
             document.getElementById('edit_piloto_foto').value = p.foto_url || '';
             
             document.getElementById('modalEditarPiloto').style.display = 'flex';
-        } catch (error) {
-            console.error('Error al cargar perfil:', error);
         }
-    }
 
-    function cerrarModalEditarPiloto() {
-        document.getElementById('modalEditarPiloto').style.display = 'none';
-    }
+        function cerrarModalEditarPiloto() {
+            document.getElementById('modalEditarPiloto').style.display = 'none';
+        }
 
-    document.getElementById('formEditarPiloto').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const id = document.getElementById('edit_piloto_id').value;
-        const token = localStorage.getItem('token');
-        
-        const data = {
-            nombre_completo: document.getElementById('edit_piloto_nombre').value,
-            email: document.getElementById('edit_piloto_email').value,
-            foto_url: document.getElementById('edit_piloto_foto').value || null
-        };
-        
-        try {
-            const res = await fetch(`${API_BASE_URL}/api/admin/pilotos/${id}`, {
+        const uploadAreaEditarPiloto = document.getElementById('uploadAreaEditarPiloto');
+        const fotoArchivoEditarPiloto = document.getElementById('fotoArchivoEditarPiloto');
+
+        if (uploadAreaEditarPiloto) {
+            uploadAreaEditarPiloto.addEventListener('click', () => fotoArchivoEditarPiloto.click());
+            
+            fotoArchivoEditarPiloto.addEventListener('change', async function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+                const id = document.getElementById('edit_piloto_id').value;
+                if (!id) return;
+                
+                const preview = document.getElementById('uploadPreviewEditarPiloto');
+                const previewImg = document.getElementById('uploadPreviewImgEditarPiloto');
+                const progress = document.getElementById('uploadProgressEditarPiloto');
+                const urlInput = document.getElementById('edit_piloto_foto');
+                
+                const reader = new FileReader();
+                reader.onload = (e) => { previewImg.src = e.target.result; preview.style.display = 'block'; };
+                reader.readAsDataURL(file);
+                
+                try {
+                    await subirImagen('piloto', file, id, preview, progress, urlInput);
+                    mostrarAlerta('Imagen subida correctamente', 'success');
+                } catch (error) {
+                    mostrarAlerta(error.message || 'Error al subir imagen', 'error');
+                }
+            });
+        }
+
+        document.getElementById('edit_piloto_foto').addEventListener('input', function() {
+            const url = this.value;
+            const preview = document.getElementById('fotoPreview');
+            const previewImg = document.getElementById('previewImg');
+            if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
+                preview.style.display = 'block';
+                previewImg.src = url;
+            } else {
+                preview.style.display = 'none';
+            }
+        });
+
+        document.getElementById('formEditarPiloto').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('edit_piloto_id').value;
+            const token = localStorage.getItem('token');
+            
+            const data = {
+                nombre_completo: document.getElementById('edit_piloto_nombre').value,
+                email: document.getElementById('edit_piloto_email').value,
+                foto_url: document.getElementById('edit_piloto_foto').value || null
+            };
+            
+            const res = await fetch(`/api/admin/pilotos/${id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify(data)
@@ -681,101 +748,72 @@
                 
                 mostrarAlerta('Perfil actualizado', 'success');
                 cerrarModalEditarPiloto();
-                setTimeout(() => location.reload(), 1000);
+                location.reload();
             } else {
                 mostrarAlerta('Error al actualizar', 'error');
             }
-        } catch (error) {
-            mostrarAlerta('Error de conexión', 'error');
+        });
+
+        // ============================================
+        // NAVEGACIÓN
+        // ============================================
+
+        function navegarA(pagina) {
+            window.location.href = pagina;
         }
-    });
 
-    // ============================================
-    // NAVEGACIÓN
-    // ============================================
-
-    function navegarA(pagina) {
-        window.location.href = pagina;
-    }
-
-    function cerrarSesion() {
-        localStorage.removeItem('token');
-        localStorage.removeItem('piloto');
-        window.location.href = 'index.html';
-    }
-
-    // ============================================
-    // EVENTOS
-    // ============================================
-
-    document.getElementById('menuToggle').addEventListener('click', () => {
-        document.getElementById('sidebar').classList.toggle('mobile-open');
-    });
-    
-    document.getElementById('profileBtn').addEventListener('click', () => {
-        document.getElementById('profileDropdown').classList.toggle('show');
-    });
-    
-    document.getElementById('miPerfilBtn').addEventListener('click', editarMiPerfil);
-    document.getElementById('cerrarSesionBtn').addEventListener('click', cerrarSesion);
-    
-    document.addEventListener('click', (event) => {
-        const profileBtn = document.getElementById('profileBtn');
-        const dropdown = document.getElementById('profileDropdown');
-        if (!profileBtn.contains(event.target) && !dropdown.contains(event.target)) {
-            dropdown.classList.remove('show');
+        function cerrarSesion() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('piloto');
+            window.location.href = 'index.html';
         }
-    });
 
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') cerrarModalEditarPiloto();
-    });
+        function toggleMobileMenu() {
+            document.getElementById('sidebar').classList.toggle('mobile-open');
+        }
 
-    // Upload de foto
-    const uploadAreaEditarPiloto = document.getElementById('uploadAreaEditarPiloto');
-    const fotoArchivoEditarPiloto = document.getElementById('fotoArchivoEditarPiloto');
-    
-    if (uploadAreaEditarPiloto && fotoArchivoEditarPiloto) {
-        uploadAreaEditarPiloto.addEventListener('click', () => fotoArchivoEditarPiloto.click());
-        
-        fotoArchivoEditarPiloto.addEventListener('change', async function(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-            const id = document.getElementById('edit_piloto_id').value;
-            if (!id) return;
-            
-            const preview = document.getElementById('uploadPreviewEditarPiloto');
-            const previewImg = document.getElementById('uploadPreviewImgEditarPiloto');
-            const progress = document.getElementById('uploadProgressEditarPiloto');
-            const urlInput = document.getElementById('edit_piloto_foto');
-            
-            const reader = new FileReader();
-            reader.onload = (e) => { previewImg.src = e.target.result; preview.style.display = 'block'; };
-            reader.readAsDataURL(file);
-            
-            try {
-                await subirImagen('piloto', file, id, preview, progress, urlInput);
-                mostrarAlerta('Imagen subida correctamente', 'success');
-            } catch (error) {
-                mostrarAlerta(error.message || 'Error al subir imagen', 'error');
+        function toggleProfileDropdown() {
+            document.getElementById('profileDropdown').classList.toggle('show');
+        }
+
+        function closeDropdownOnClickOutside(event) {
+            const profileBtn = document.getElementById('profileBtn');
+            const dropdown = document.getElementById('profileDropdown');
+            if (!profileBtn.contains(event.target) && !dropdown.contains(event.target)) {
+                dropdown.classList.remove('show');
+            }
+        }
+
+        document.getElementById('menuToggle').addEventListener('click', toggleMobileMenu);
+        document.getElementById('profileBtn').addEventListener('click', toggleProfileDropdown);
+        document.getElementById('miPerfilBtn').addEventListener('click', editarMiPerfil);
+        document.getElementById('cerrarSesionBtn').addEventListener('click', cerrarSesion);
+        document.addEventListener('click', closeDropdownOnClickOutside);
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                cerrarModalEditarPiloto();
             }
         });
-    }
 
-    // ============================================
-    // INICIALIZACIÓN
-    // ============================================
+        // ============================================
+        // INICIALIZACIÓN
+        // ============================================
 
-    async function init() {
-        console.log('Iniciando página...');
-        const autenticado = verificarAutenticacion();
-        if (!autenticado) return;
-        console.log('Usuario autenticado:', pilotoActual.id, pilotoActual.rol);
-        await cargarEstadisticas();
-        iniciarVerificacionPeriodica();
-    }
+        async function init() {
+            console.log('Iniciando página...');
+            
+            const autenticado = verificarAutenticacion();
+            if (!autenticado) return;
+            
+            console.log('Usuario autenticado:', pilotoActual.id, pilotoActual.rol);
+            
+            await cargarEstadisticas();
+            iniciarVerificacionPeriodica();
+        }
 
-    document.addEventListener('DOMContentLoaded', init);
-</script>
+        document.addEventListener('DOMContentLoaded', init);
+
+    </script>
 </body>
 </html>
