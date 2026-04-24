@@ -371,6 +371,7 @@
 <script src="js/config.js"></script>
 
     <script>
+        const API_BASE_URL = 'https://air-force-gestion.onrender.com';
         let pilotoActual = null;
 
         // Mostrar alerta personalizada
@@ -429,7 +430,7 @@ function mostrarAlerta(mensaje, tipo = 'info') {
     if (pilotoActual.foto_url && pilotoActual.foto_url !== '') {
         let fotoUrl = pilotoActual.foto_url;
         if (!fotoUrl.startsWith('http')) {
-            fotoUrl = `http://localhost:3000${fotoUrl}`;
+            fotoUrl = `${API_BASE_URL}${fotoUrl}`;
         }
         avatarImg.style.display = 'block';
         avatarTexto.style.display = 'none';
@@ -517,9 +518,9 @@ mostrarAlerta('Error al actualizar rol', 'error');
             container.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-pulse"></i><br>Cargando aeronaves...</div>';
             
             try {
-                const response = await fetch('/api/aeronaves', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
+                const response = await fetch(`${API_BASE_URL}/api/aeronaves`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+});
                 
                 if (response.status === 401) { 
                     window.location.href = 'index.html'; 
@@ -575,7 +576,7 @@ mostrarAlerta('Error al actualizar rol', 'error');
                             <div class="aeronaves-grid">
                                 ${aeronaves.map(a => {
                                     const tieneImagen = a.imagen_url && a.imagen_url.trim() !== '';
-                                    const imagenUrl = tieneImagen ? `http://localhost:3000${a.imagen_url}` : null;
+                                    const imagenUrl = tieneImagen ? `${API_BASE_URL}${a.imagen_url}` : null;
                                     const nivelIcono = getNivelIcono(a.nivel);
                                     const nivelColor = getNivelColor(a.nivel);
                                     
