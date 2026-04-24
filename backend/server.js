@@ -13,7 +13,8 @@ const fs = require('fs');
 dotenv.config();
 
 // Importar base de datos
-const db = require('./config/database');
+//const db = require('./config/database');
+const pool = require('./config/supabase');
 
 // Importar rutas
 const authRoutes = require('./routes/auth');
