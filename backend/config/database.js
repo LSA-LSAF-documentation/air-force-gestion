@@ -114,34 +114,7 @@ db.serialize(() => {
   console.log('✅ Todas las tablas creadas/verificadas');
 });
 
-// Crear Admin de prueba si no existe
-db.get("SELECT id FROM pilotos WHERE rol = 'Admin'", [], (err, row) => {
-  if (err) {
-    console.error('Error al verificar Admin:', err);
-    return;
-  }
-  
-  if (!row) {
-    const bcrypt = require('bcryptjs');
-    const passwordHash = bcrypt.hashSync('123456', 10);
-    const adminId = 'ADMIN01';
-    const adminEmail = 'admin@airforce.mil';
-    
-    db.run(`INSERT INTO pilotos (id, nombre_completo, grado_code, email, password_hash, rol, activo) 
-            VALUES (?, ?, ?, ?, ?, ?, 1)`,
-      [adminId, 'Administrador', 'Capt', adminEmail, passwordHash, 'Admin'],
-      (err) => {
-        if (err) {
-          console.error('Error al crear Admin:', err);
-        } else {
-          console.log('✅ Admin de prueba creado:');
-          console.log('   Email: admin@airforce.mil');
-          console.log('   Contraseña: 123456');
-        }
-      }
-    );
-  }
-});
+
 // ============================================
 // INSERTAR DATOS INICIALES
 // ============================================
