@@ -6,10 +6,6 @@ const { verificarToken } = require('./auth');
 // Obtener todos los pilotos activos
 router.get('/', verificarToken, async (req, res) => {
   try {
-    if (req.piloto.rol === 'Piloto') {
-      return res.status(403).json({ error: 'Acceso denegado' });
-    }
-    
     const query = `
       SELECT p.id, p.nombre_completo, p.grado_code, p.email, p.tipo_sangre, 
              p.nacionalidad, p.foto_url, p.created_at, p.activo,
