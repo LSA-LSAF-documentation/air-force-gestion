@@ -518,97 +518,73 @@
         // CARGA DE PILOTOS (CORREGIDO - Soporta rol Piloto)
         // ============================================
         async function cargarPilotos() {
-            const token = localStorage.getItem('token');
-            const container = document.getElementById('pilotosContainer');
-            const titulo = document.getElementById('tituloPagina');
-            
-            container.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-pulse"></i><br>Cargando...</div>';
-            
-            try {
-                let pilotos = [];
-                
-                // Si es Piloto, solo se muestra a sí mismo
-                if (pilotoActual.rol === 'Piloto') {
-                    titulo.textContent = 'Mi Perfil';
-                    const response = await fetch(`${API_BASE_URL}/api/pilotos/${pilotoActual.id}`, {
-                        headers: { 'Authorization': `Bearer ${token}` }
-                    });
-                    
-                    if (response.ok) {
-                        const data = await response.json();
-                        if (data.piloto) {
-                            // Agregar campo nombre_completo si no existe
-                            if (!data.piloto.nombre_completo) {
-                                data.piloto.nombre_completo = pilotoActual.nombre;
-                            }
-                            pilotos = [data.piloto];
-                        }
-                    } else if (response.status === 404) {
-                        container.innerHTML = '<div class="error-message"><i class="fas fa-user-slash"></i><br>Perfil no encontrado</div>';
-                        return;
-                    } else {
-                        throw new Error(`Error ${response.status}`);
-                    }
-                } else {
-                    // Admin/Supervisor/Instructor: cargar lista completa
-                    titulo.textContent = 'Directorio de Pilotos';
-                    const response = await fetch(`${API_BASE_URL}/api/pilotos`, {
-                        headers: { 'Authorization': `Bearer ${token}` }
-                    });
-                    
-                    if (response.status === 401) { window.location.href = 'index.html'; return; }
-                    if (!response.ok) throw new Error(`Error ${response.status}`);
-                    
-                    const data = await response.json();
-                    pilotos = data.pilotos || [];
-                }
-                
-                todosLosPilotos = pilotos;
-                
-                if (pilotos.length === 0) {
-                    container.innerHTML = '<div class="loading"><i class="fas fa-users-slash"></i><br>No hay pilotos registrados</div>';
-                    return;
-                }
-                
-                // Estadísticas
-                document.getElementById('statsContainer').innerHTML = `
-                    <div class="stat-card"><div class="stat-number">${pilotos.length}</div><div class="stat-label">${pilotoActual.rol === 'Piloto' ? 'Mi Perfil' : 'Total Pilotos'}</div></div>
-                `;
-                
-                // Renderizar tarjetas
-                const html = pilotos.map(piloto => {
-                    const iniciales = (piloto.nombre_completo || '').split(' ').map(n => n[0]).join('').substring(0, 2);
-                    const nombreRango = getRangoNombre(piloto.grado_code);
-                    const tieneFoto = piloto.foto_url && piloto.foto_url.trim() !== '';
-                    const fotoUrl = tieneFoto ? `${API_BASE_URL}${piloto.foto_url}` : null;
-                    
-                    return `
-                        <div class="piloto-card" onclick="verDetalle('${piloto.id}')">
-                            <div class="piloto-header">
-                                ${tieneFoto 
-                                    ? `<img class="piloto-avatar" src="${fotoUrl}" alt="${piloto.nombre_completo}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"><div class="piloto-avatar" style="display:none; background:var(--af-sky);">${iniciales}</div>`
-                                    : `<div class="piloto-avatar" style="background:var(--af-sky); display:flex; align-items:center; justify-content:center; font-size:20px;">${iniciales}</div>`
-                                }
-                                <div class="piloto-info">
-                                    <div class="piloto-nombre">${piloto.nombre_completo || pilotoActual.nombre}</div>
-                                    <div class="piloto-grado">${nombreRango}</div>
-                                </div>
-                            </div>
-                            <div class="piloto-id">${piloto.id}</div>
-                            <div class="piloto-detalles">
-                                <div class="detalle-linea"><i class="fas fa-tint"></i><span>Tipo de Sangre: <strong>${piloto.tipo_sangre || 'No registrado'}</strong></span></div>
-                                <div class="detalle-linea"><i class="fas fa-flag"></i><span>Nacionalidad: ${getNacionalidadTexto(piloto.nacionalidad)}</span></div>
-                            </div>
-                        </div>
-                    `;
-                }).join('');
-                
-                container.innerHTML = html;
-            } catch (error) {
-                console.error('Error:', error);
-                container.innerHTML = `<div class="error-message"><i class="fas fa-exclamation-triangle"></i><br>Error: ${error.message}</div>`;
-            }
+    const token = localStorage.getItem('token');
+    const container = document.getElementById('pilotosContainer');
+    const titulo = document.getElementById('tituloPagina');
+    
+    container.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-pulse"></i><br>Cargando...</div>';
+    titulo.textContent = 'Directorio de Pilotos';
+    
+    try {
+        // ✅ Todos los roles cargan la lista completa
+        const response = await fetch(`${API_BASE_URL}/api/pilotos`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (response.status === 401) { 
+            window.location.href = 'index.html'; 
+            return; 
         }
+        if (!response.ok) throw new Error(`Error ${response.status}`);
+        
+        const data = await response.json();
+        const pilotos = data.pilotos || [];
+        todosLosPilotos = pilotos;
+        
+        if (pilotos.length === 0) {
+            container.innerHTML = '<div class="loading"><i class="fas fa-users-slash"></i><br>No hay pilotos registrados</div>';
+            return;
+        }
+        
+        // Estadísticas
+        document.getElementById('statsContainer').innerHTML = `
+            <div class="stat-card"><div class="stat-number">${pilotos.length}</div><div class="stat-label">Total Pilotos</div></div>
+        `;
+        
+        // Renderizar tarjetas
+        const html = pilotos.map(piloto => {
+            const iniciales = (piloto.nombre_completo || '').split(' ').map(n => n[0]).join('').substring(0, 2);
+            const nombreRango = getRangoNombre(piloto.grado_code);
+            const tieneFoto = piloto.foto_url && piloto.foto_url.trim() !== '';
+            const fotoUrl = tieneFoto ? `${API_BASE_URL}${piloto.foto_url}` : null;
+            
+            return `
+                <div class="piloto-card" onclick="verDetalle('${piloto.id}')">
+                    <div class="piloto-header">
+                        ${tieneFoto 
+                            ? `<img class="piloto-avatar" src="${fotoUrl}" alt="${piloto.nombre_completo}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"><div class="piloto-avatar" style="display:none; background:var(--af-sky);">${iniciales}</div>`
+                            : `<div class="piloto-avatar" style="background:var(--af-sky); display:flex; align-items:center; justify-content:center; font-size:20px;">${iniciales}</div>`
+                        }
+                        <div class="piloto-info">
+                            <div class="piloto-nombre">${piloto.nombre_completo || ''}</div>
+                            <div class="piloto-grado">${nombreRango}</div>
+                        </div>
+                    </div>
+                    <div class="piloto-id">${piloto.id}</div>
+                    <div class="piloto-detalles">
+                        <div class="detalle-linea"><i class="fas fa-tint"></i><span>Tipo de Sangre: <strong>${piloto.tipo_sangre || 'No registrado'}</strong></span></div>
+                        <div class="detalle-linea"><i class="fas fa-flag"></i><span>Nacionalidad: ${getNacionalidadTexto(piloto.nacionalidad)}</span></div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+        container.innerHTML = html;
+    } catch (error) {
+        console.error('Error:', error);
+        container.innerHTML = `<div class="error-message"><i class="fas fa-exclamation-triangle"></i><br>Error: ${error.message}</div>`;
+    }
+}
 
         // ============================================
         // HORAS, CERTIFICACIONES, HISTORIAL
