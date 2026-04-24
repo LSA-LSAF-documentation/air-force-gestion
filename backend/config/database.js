@@ -4,18 +4,9 @@ const bcrypt = require('bcryptjs');
 const fs = require('fs');
 
 // Asegurar que la carpeta database existe
-const dbDir = path.join(__dirname, '../../database');
-if (!fs.existsSync(dbDir)) {
-  fs.mkdirSync(dbDir, { recursive: true });
-}
 
-const db = new sqlite3.Database(path.join(dbDir, 'airforce.db'), (err) => {
-  if (err) {
-    console.error('Error al conectar:', err.message);
-  } else {
-    console.log('✅ Conectado a SQLite');
-  }
-});
+const dbPath = process.env.DB_PATH || path.join(__dirname, '../../database/airforce.db');
+const db = new sqlite3.Database(dbPath);
 
 // ============================================
 // CREAR TODAS LAS TABLAS
