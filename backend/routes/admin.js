@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../config/database');
+const pool = require('../config/supabase'); // ✅ Supabase/PostgreSQL
 const bcrypt = require('bcryptjs');
 const { verificarToken } = require('./auth');
 const multer = require('multer');
@@ -9,10 +9,9 @@ const fs = require('fs');
 const { enviarWebhookRegistro, getNextRegistroId } = require('../utils/webhooks');
 
 // ============================================
-// MIDDLEWARE: Verificar que es Admin
+// MIDDLEWARES DE AUTORIZACIÓN
 // ============================================
 
-// Verificar si es Admin o Supervisor (para acciones que ambos pueden hacer)
 function esAdminOSupervisor(req, res, next) {
   if (req.piloto.rol !== 'Admin' && req.piloto.rol !== 'Supervisor') {
     return res.status(403).json({ error: 'Acceso denegado. Se requiere rol Admin o Supervisor' });
@@ -20,7 +19,6 @@ function esAdminOSupervisor(req, res, next) {
   next();
 }
 
-// Verificar si es SOLO Admin (para acciones restringidas)
 function esAdminOnly(req, res, next) {
   if (req.piloto.rol !== 'Admin') {
     return res.status(403).json({ error: 'Acceso denegado. Se requiere rol Admin' });
@@ -35,12 +33,7 @@ function esAdmin(req, res, next) {
   next();
 }
 
-// ============================================
-// MIDDLEWARE: Verificar que es Admin o Instructor
-// ============================================
-
 function esAdminOInstructor(req, res, next) {
-  // Permitir a Instructores, Admin y Supervisor
   if (req.piloto.rol === 'Piloto') {
     return res.status(403).json({ error: 'Acceso denegado. Se requiere rol Instructor, Supervisor o Admin' });
   }
@@ -51,7 +44,6 @@ function esAdminOInstructor(req, res, next) {
 // CONFIGURACIÓN DE MULTER PARA SUBIR IMÁGENES
 // ============================================
 
-// Crear las carpetas si no existen
 const uploadsDir = path.join(__dirname, '../uploads');
 const pilotosDir = path.join(uploadsDir, 'pilotos');
 const aeronavesDir = path.join(uploadsDir, 'aeronaves');
@@ -64,45 +56,24 @@ if (!fs.existsSync(aeronavesDir)) fs.mkdirSync(aeronavesDir, { recursive: true }
 if (!fs.existsSync(ranksDir)) fs.mkdirSync(ranksDir, { recursive: true });
 if (!fs.existsSync(observacionesDir)) fs.mkdirSync(observacionesDir, { recursive: true });
 
-console.log('📁 Carpetas de uploads verificadas:');
-console.log('   -', pilotosDir);
-console.log('   -', aeronavesDir);
-console.log('   -', ranksDir);
-console.log('   -', observacionesDir);
+console.log('📁 Carpetas de uploads verificadas');
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
+    const url = req.originalUrl;
+    let destino;
+    if (url.includes('piloto')) destino = pilotosDir;
+    else if (url.includes('aeronave')) destino = aeronavesDir;
+    else if (url.includes('rango')) destino = ranksDir;
+    else if (url.includes('observacion')) destino = observacionesDir;
+    else destino = uploadsDir;
 
-  const url = req.originalUrl;
-
-  let destino;
-
-  if (url.includes('piloto')) {
-    destino = pilotosDir;
-  } else if (url.includes('aeronave')) {
-    destino = aeronavesDir;
-  } else if (url.includes('rango')) {
-    destino = ranksDir;
-  } else if (url.includes('observacion')) {
-    destino = observacionesDir;
-  } else {
-    destino = uploadsDir;
-  }
-
-  console.log('📁 Destino FINAL:', destino);
-
-  if (!fs.existsSync(destino)) {
-    fs.mkdirSync(destino, { recursive: true });
-  }
-
-  cb(null, destino);
-},
-
+    if (!fs.existsSync(destino)) fs.mkdirSync(destino, { recursive: true });
+    cb(null, destino);
+  },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const filename = uniqueSuffix + path.extname(file.originalname);
-    console.log('📄 Nombre archivo:', filename);
-    cb(null, filename);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
   }
 });
 
@@ -111,11 +82,8 @@ const upload = multer({
   limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp', 'image/gif'];
-    if (allowedTypes.includes(file.mimetype)) {
-      cb(null, true);
-    } else {
-      cb(new Error('Solo se permiten imágenes'));
-    }
+    if (allowedTypes.includes(file.mimetype)) cb(null, true);
+    else cb(new Error('Solo se permiten imágenes'));
   }
 });
 
@@ -123,82 +91,56 @@ const upload = multer({
 // ENDPOINTS DE UPLOAD
 // ============================================
 
-// Subir imagen de piloto
-router.post('/upload/piloto/:id', verificarToken, esAdmin, upload.single('imagen'), (req, res) => {
-  const { id } = req.params;
-  
-  if (!req.file) {
-    return res.status(400).json({ error: 'No se recibió ninguna imagen' });
-  }
-  
-  const fileUrl = `/uploads/pilotos/${req.file.filename}`;
-  
-  db.run("UPDATE pilotos SET foto_url = ? WHERE id = ?", [fileUrl, id], function(err) {
-    if (err) {
-      console.error('Error al actualizar foto:', err);
-      res.status(500).json({ error: err.message });
-      return;
-    }
+router.post('/upload/piloto/:id', verificarToken, esAdmin, upload.single('imagen'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!req.file) return res.status(400).json({ error: 'No se recibió ninguna imagen' });
+    
+    const fileUrl = `/uploads/pilotos/${req.file.filename}`;
+    await pool.query("UPDATE pilotos SET foto_url = $1 WHERE id = $2", [fileUrl, id]);
     res.json({ success: true, url: fileUrl });
-  });
+  } catch (error) {
+    console.error('Error al subir foto:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
-// Subir imagen de aeronave
-router.post('/upload/aeronave/:id', verificarToken, esAdmin, upload.single('imagen'), (req, res) => {
-  const { id } = req.params;
-  
-  if (!req.file) {
-    return res.status(400).json({ error: 'No se recibió ninguna imagen' });
-  }
-  
-  const fileUrl = `/uploads/aeronaves/${req.file.filename}`;
-  
-  db.run("UPDATE aeronaves SET imagen_url = ? WHERE id = ?", [fileUrl, id], function(err) {
-    if (err) {
-      console.error('Error al actualizar imagen:', err);
-      res.status(500).json({ error: err.message });
-      return;
-    }
+router.post('/upload/aeronave/:id', verificarToken, esAdmin, upload.single('imagen'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!req.file) return res.status(400).json({ error: 'No se recibió ninguna imagen' });
+    
+    const fileUrl = `/uploads/aeronaves/${req.file.filename}`;
+    await pool.query("UPDATE aeronaves SET imagen_url = $1 WHERE id = $2", [fileUrl, id]);
     res.json({ success: true, url: fileUrl });
-  });
+  } catch (error) {
+    console.error('Error al subir imagen:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
-// Subir logo de rango
-router.post('/upload/rango/:id', verificarToken, esAdmin, upload.single('imagen'), (req, res) => {
-  const { id } = req.params;
-  
-  if (!req.file) {
-    return res.status(400).json({ error: 'No se recibió ninguna imagen' });
-  }
-  
-  const fileUrl = `/uploads/ranks/${req.file.filename}`;
-  
-  db.run("UPDATE rangos SET logo_url = ? WHERE id = ?", [fileUrl, id], function(err) {
-    if (err) {
-      console.error('Error al actualizar logo:', err);
-      res.status(500).json({ error: err.message });
-      return;
-    }
+router.post('/upload/rango/:id', verificarToken, esAdmin, upload.single('imagen'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!req.file) return res.status(400).json({ error: 'No se recibió ninguna imagen' });
+    
+    const fileUrl = `/uploads/ranks/${req.file.filename}`;
+    await pool.query("UPDATE rangos SET logo_url = $1 WHERE id = $2", [fileUrl, id]);
     res.json({ success: true, url: fileUrl });
-  });
+  } catch (error) {
+    console.error('Error al subir logo:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
-// Subir imagen de observación
 router.post('/upload/observacion', verificarToken, upload.single('imagen'), (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ error: 'No se recibió ninguna imagen' });
-  }
-  
+  if (!req.file) return res.status(400).json({ error: 'No se recibió ninguna imagen' });
   const fileUrl = `/uploads/observaciones/${req.file.filename}`;
   res.json({ success: true, url: fileUrl });
 });
 
-// Subir múltiples imágenes de observación
 router.post('/upload/observaciones', verificarToken, upload.array('imagenes', 10), (req, res) => {
-  if (!req.files || req.files.length === 0) {
-    return res.status(400).json({ error: 'No se recibieron imágenes' });
-  }
-  
+  if (!req.files || req.files.length === 0) return res.status(400).json({ error: 'No se recibieron imágenes' });
   const urls = req.files.map(file => `/uploads/observaciones/${file.filename}`);
   res.json({ success: true, urls });
 });
@@ -207,620 +149,440 @@ router.post('/upload/observaciones', verificarToken, upload.array('imagenes', 10
 // GESTIÓN DE RANGOS
 // ============================================
 
-// Obtener todos los rangos
-router.get('/rangos', verificarToken, esAdminOnly, (req, res) => {
-  db.all("SELECT * FROM rangos ORDER BY orden ASC", [], (err, rows) => {
-    if (err) {
-      res.status(500).json({ error: err.message });
-      return;
-    }
-    res.json({ ranks: rows });
-  });
+router.get('/rangos', verificarToken, esAdminOnly, async (req, res) => {
+  try {
+    const result = await pool.query("SELECT * FROM rangos ORDER BY orden ASC");
+    res.json({ ranks: result.rows });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
-// Actualizar rangos (guardar cambios)
-router.put('/rangos', verificarToken, esAdminOnly, (req, res) => {
-  const { ranks } = req.body;
-  
-  console.log('📝 Recibiendo rangos para guardar:', ranks);
-  
-  if (!ranks || !Array.isArray(ranks)) {
-    return res.status(400).json({ error: 'Datos inválidos' });
+router.put('/rangos', verificarToken, esAdminOnly, async (req, res) => {
+  try {
+    const { ranks } = req.body;
+    if (!ranks || !Array.isArray(ranks)) return res.status(400).json({ error: 'Datos inválidos' });
+    if (ranks.length === 0) return res.status(400).json({ error: 'No hay rangos para guardar' });
+
+    await pool.query("DELETE FROM rangos");
+
+    for (const rango of ranks) {
+      if (!rango.code || !rango.name) continue;
+      await pool.query(
+        `INSERT INTO rangos (code, nombre, orden, logo_url, discord_role_id) VALUES ($1, $2, $3, $4, $5)`,
+        [rango.code, rango.name, rango.orden || 999, rango.logo_url || null, rango.discord_role_id || null]
+      );
+    }
+    
+    console.log('✅ Rangos guardados correctamente');
+    res.json({ success: true, mensaje: 'Rangos actualizados' });
+  } catch (error) {
+    console.error('Error al guardar rangos:', error);
+    res.status(500).json({ error: error.message });
   }
-  
-  // Verificar que hay rangos
-  if (ranks.length === 0) {
-    return res.status(400).json({ error: 'No hay rangos para guardar' });
-  }
-  
-  db.serialize(() => {
-    // Primero, eliminar todos los rangos existentes
-    db.run("DELETE FROM rangos", (err) => {
-      if (err) {
-        console.error('Error al eliminar rangos:', err);
-        return res.status(500).json({ error: err.message });
-      }
-      
-      let completados = 0;
-      let errores = false;
-      
-      ranks.forEach(rango => {
-        // Validar que el rango tiene los campos necesarios
-        if (!rango.code || !rango.name) {
-          errores = true;
-          console.error('Rango inválido:', rango);
-          completados++;
-          return;
-        }
-        
-        db.run(`INSERT INTO rangos (code, nombre, orden, logo_url, discord_role_id) 
-                VALUES (?, ?, ?, ?, ?)`,
-          [rango.code, rango.name, rango.orden || 999, rango.logo_url || null, rango.discord_role_id || null],
-          (err) => {
-            if (err) {
-              console.error('Error al insertar rango:', err);
-              errores = true;
-            }
-            completados++;
-            
-            if (completados === ranks.length) {
-              if (errores) {
-                res.status(500).json({ error: 'Algunos rangos no se pudieron guardar' });
-              } else {
-                console.log('✅ Rangos guardados correctamente');
-                res.json({ success: true, mensaje: 'Rangos actualizados' });
-              }
-            }
-          }
-        );
-      });
-    });
-  });
 });
 
-// Agregar nuevo rango
-router.post('/rangos', verificarToken, esAdminOnly, (req, res) => {
-  const { code, nombre, orden } = req.body;
-  
-  if (!code || !nombre) {
-    return res.status(400).json({ error: 'Código y nombre requeridos' });
+router.post('/rangos', verificarToken, esAdminOnly, async (req, res) => {
+  try {
+    const { code, nombre, orden } = req.body;
+    if (!code || !nombre) return res.status(400).json({ error: 'Código y nombre requeridos' });
+    
+    const result = await pool.query(
+      "INSERT INTO rangos (code, nombre, orden) VALUES ($1, $2, $3) RETURNING id",
+      [code, nombre, orden || 999]
+    );
+    res.json({ success: true, id: result.rows[0].id });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
-  
-  db.run("INSERT INTO rangos (code, nombre, orden) VALUES (?, ?, ?)",
-    [code, nombre, orden || 999],
-    function(err) {
-      if (err) {
-        res.status(500).json({ error: err.message });
-        return;
-      }
-      res.json({ success: true, id: this.lastID });
-    }
-  );
 });
 
-// Eliminar rango
-router.delete('/rangos/:id', verificarToken, esAdminOnly, (req, res) => {
-  const { id } = req.params;
-  
-  db.run("DELETE FROM rangos WHERE id = ?", [id], function(err) {
-    if (err) {
-      res.status(500).json({ error: err.message });
-      return;
-    }
+router.delete('/rangos/:id', verificarToken, esAdminOnly, async (req, res) => {
+  try {
+    await pool.query("DELETE FROM rangos WHERE id = $1", [req.params.id]);
     res.json({ success: true });
-  });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // ============================================
 // GESTIÓN DE PILOTOS
 // ============================================
 
-// Obtener todos los pilotos (para admin panel)
-router.get('/pilotos', verificarToken, esAdminOSupervisor, (req, res) => {
-  const { incluirInactivos } = req.query;
-  
-  let query = `
-    SELECT p.*, r.nombre as grado_nombre 
-    FROM pilotos p 
-    LEFT JOIN rangos r ON p.grado_code = r.code 
-  `;
-  
-  if (incluirInactivos !== 'true') {
-    query += " WHERE p.activo = 1 OR p.activo IS NULL ";
-  }
-  
-  // Ordenar por rol: Admin(1) → Supervisor(2) → Instructor(3) → Piloto(4)
-  query += `
-    ORDER BY 
-      CASE p.rol
-        WHEN 'Admin' THEN 1
-        WHEN 'Supervisor' THEN 2
-        WHEN 'Instructor' THEN 3
-        WHEN 'Piloto' THEN 4
-        ELSE 5
-      END,
-      r.orden ASC,
-      p.nombre_completo ASC
-  `;
-  
-  db.all(query, [], (err, rows) => {
-    if (err) {
-      console.error('Error al obtener pilotos:', err);
-      res.status(500).json({ error: err.message });
-      return;
-    }
-    res.json({ pilotos: rows });
-  });
-});
-
-// Obtener un piloto específico (Admin o Supervisor)
-router.get('/pilotos/:id', verificarToken, (req, res) => {
-  const { id } = req.params;
-  
-  if (req.piloto.rol !== 'Admin' && req.piloto.rol !== 'Supervisor') {
-    return res.status(403).json({ error: 'Acceso denegado' });
-  }
-  
-  const query = `
-    SELECT p.id, p.nombre_completo, p.grado_code, p.email, p.tipo_sangre, 
-           p.nacionalidad, p.foto_url, p.rol, p.activo, p.discord_id,
-           r.nombre as grado_nombre
-    FROM pilotos p
-    LEFT JOIN rangos r ON p.grado_code = r.code
-    WHERE p.id = ?
-  `;
-  
-  db.get(query, [id], (err, row) => {
-    if (err) {
-      console.error('Error al obtener piloto:', err);
-      res.status(500).json({ error: err.message });
-      return;
-    }
-    if (!row) {
-      res.status(404).json({ error: 'Piloto no encontrado' });
-      return;
-    }
-    res.json({ piloto: row });
-  });
-});
-
-// Agregar nuevo piloto
-router.post('/pilotos', verificarToken, esAdminOSupervisor, (req, res) => {
-  const { id, nombre_completo, grado_code, email, password, tipo_sangre, nacionalidad, rol, foto_url, discord_id } = req.body;
-  
-  if (!id || !nombre_completo || !grado_code || !email || !password) {
-    return res.status(400).json({ error: 'Faltan campos requeridos' });
-  }
-  
-  db.get("SELECT id FROM pilotos WHERE email = ?", [email], (err, existing) => {
-    if (err) {
-      res.status(500).json({ error: err.message });
-      return;
-    }
-    if (existing) {
-      return res.status(400).json({ error: 'El email ya está registrado' });
+router.get('/pilotos', verificarToken, esAdminOSupervisor, async (req, res) => {
+  try {
+    const { incluirInactivos } = req.query;
+    let query = `
+      SELECT p.*, r.nombre as grado_nombre 
+      FROM pilotos p 
+      LEFT JOIN rangos r ON p.grado_code = r.code 
+    `;
+    
+    if (incluirInactivos !== 'true') {
+      query += " WHERE p.activo = true OR p.activo IS NULL ";
     }
     
-    db.get("SELECT id FROM pilotos WHERE id = ?", [id], (err, existingId) => {
-      if (err) {
-        res.status(500).json({ error: err.message });
-        return;
-      }
-      if (existingId) {
-        return res.status(400).json({ error: 'El ID ya está registrado' });
-      }
-      
-      const password_hash = bcrypt.hashSync(password, 10);
-      
-      db.run(`INSERT INTO pilotos 
-        (id, nombre_completo, grado_code, email, password_hash, tipo_sangre, nacionalidad, rol, foto_url, activo) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
-        [id, nombre_completo, grado_code, email, password_hash, tipo_sangre || null, nacionalidad || 'LS', rol || 'Piloto', foto_url || null],
-        function(err) {
-          if (err) {
-            console.error('Error al crear piloto:', err);
-            res.status(500).json({ error: err.message });
-            return;
-          }
-          res.json({ success: true, mensaje: 'Piloto agregado', id });
-        }
-      );
-    });
-  });
+    query += `
+      ORDER BY 
+        CASE p.rol
+          WHEN 'Admin' THEN 1
+          WHEN 'Supervisor' THEN 2
+          WHEN 'Instructor' THEN 3
+          WHEN 'Piloto' THEN 4
+          ELSE 5
+        END,
+        r.orden ASC,
+        p.nombre_completo ASC
+    `;
+    
+    const result = await pool.query(query);
+    res.json({ pilotos: result.rows });
+  } catch (error) {
+    console.error('Error al obtener pilotos:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
-// Actualizar piloto (Admin o Supervisor)
-router.put('/pilotos/:id', verificarToken, (req, res) => {
-  const { id } = req.params;
-  const { nombre_completo, email, foto_url, discord_id } = req.body;
-  
-  // Permitir acceso a Admin y Supervisor
-  if (req.piloto.rol !== 'Admin' && req.piloto.rol !== 'Supervisor') {
-    return res.status(403).json({ error: 'Acceso denegado' });
-  }
-  
-  db.run("UPDATE pilotos SET nombre_completo = ?, email = ?, foto_url = ?, discord_id = ? WHERE id = ?",
-    [nombre_completo, email, foto_url, discord_id || null, id],
-    function(err) {
-      if (err) {
-        console.error('Error al actualizar piloto:', err);
-        res.status(500).json({ error: err.message });
-        return;
-      }
-      res.json({ success: true, mensaje: 'Piloto actualizado' });
+router.get('/pilotos/:id', verificarToken, async (req, res) => {
+  try {
+    if (req.piloto.rol !== 'Admin' && req.piloto.rol !== 'Supervisor') {
+      return res.status(403).json({ error: 'Acceso denegado' });
     }
-  );
+    
+    const result = await pool.query(`
+      SELECT p.id, p.nombre_completo, p.grado_code, p.email, p.tipo_sangre, 
+             p.nacionalidad, p.foto_url, p.rol, p.activo, p.discord_id,
+             r.nombre as grado_nombre
+      FROM pilotos p
+      LEFT JOIN rangos r ON p.grado_code = r.code
+      WHERE p.id = $1
+    `, [req.params.id]);
+    
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Piloto no encontrado' });
+    res.json({ piloto: result.rows[0] });
+  } catch (error) {
+    console.error('Error al obtener piloto:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
-// Actualizar grado/rango de un piloto
-router.put('/pilotos/:id/grado', verificarToken, esAdmin, (req, res) => {
-  const { id } = req.params;
-  const { grado_code } = req.body;
-  
-  if (!grado_code) {
-    return res.status(400).json({ error: 'Grado requerido' });
-  }
-  
-  db.run("UPDATE pilotos SET grado_code = ? WHERE id = ?", [grado_code, id], function(err) {
-    if (err) {
-      res.status(500).json({ error: err.message });
-      return;
+router.post('/pilotos', verificarToken, esAdminOSupervisor, async (req, res) => {
+  try {
+    const { id, nombre_completo, grado_code, email, password, tipo_sangre, nacionalidad, rol, foto_url, discord_id } = req.body;
+    if (!id || !nombre_completo || !grado_code || !email || !password) {
+      return res.status(400).json({ error: 'Faltan campos requeridos' });
     }
+    
+    const emailCheck = await pool.query("SELECT id FROM pilotos WHERE email = $1", [email]);
+    if (emailCheck.rows.length > 0) return res.status(400).json({ error: 'El email ya está registrado' });
+    
+    const idCheck = await pool.query("SELECT id FROM pilotos WHERE id = $1", [id]);
+    if (idCheck.rows.length > 0) return res.status(400).json({ error: 'El ID ya está registrado' });
+    
+    const password_hash = bcrypt.hashSync(password, 10);
+    
+    await pool.query(
+      `INSERT INTO pilotos (id, nombre_completo, grado_code, email, password_hash, tipo_sangre, nacionalidad, rol, foto_url, activo) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, true)`,
+      [id, nombre_completo, grado_code, email, password_hash, tipo_sangre || null, nacionalidad || 'LS', rol || 'Piloto', foto_url || null]
+    );
+    
+    res.json({ success: true, mensaje: 'Piloto agregado', id });
+  } catch (error) {
+    console.error('Error al crear piloto:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.put('/pilotos/:id', verificarToken, async (req, res) => {
+  try {
+    if (req.piloto.rol !== 'Admin' && req.piloto.rol !== 'Supervisor') {
+      return res.status(403).json({ error: 'Acceso denegado' });
+    }
+    
+    const { nombre_completo, email, foto_url, discord_id } = req.body;
+    await pool.query(
+      "UPDATE pilotos SET nombre_completo = $1, email = $2, foto_url = $3, discord_id = $4 WHERE id = $5",
+      [nombre_completo, email, foto_url, discord_id || null, req.params.id]
+    );
+    res.json({ success: true, mensaje: 'Piloto actualizado' });
+  } catch (error) {
+    console.error('Error al actualizar piloto:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.put('/pilotos/:id/grado', verificarToken, esAdmin, async (req, res) => {
+  try {
+    const { grado_code } = req.body;
+    if (!grado_code) return res.status(400).json({ error: 'Grado requerido' });
+    
+    await pool.query("UPDATE pilotos SET grado_code = $1 WHERE id = $2", [grado_code, req.params.id]);
     res.json({ success: true, mensaje: 'Grado actualizado' });
-  });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
-// Actualizar rol de un piloto
-router.put('/pilotos/:id/rol', verificarToken, esAdminOnly, (req, res) => {
-  const { id } = req.params;
-  const { rol } = req.body;
-  
-  if (!['Piloto', 'Instructor', 'Supervisor', 'Admin'].includes(rol)) {
-    return res.status(400).json({ error: 'Rol inválido' });
-  }
-  
-  db.run("UPDATE pilotos SET rol = ? WHERE id = ?", [rol, id], function(err) {
-    if (err) {
-      res.status(500).json({ error: err.message });
-      return;
+router.put('/pilotos/:id/rol', verificarToken, esAdminOnly, async (req, res) => {
+  try {
+    const { rol } = req.body;
+    if (!['Piloto', 'Instructor', 'Supervisor', 'Admin'].includes(rol)) {
+      return res.status(400).json({ error: 'Rol inválido' });
     }
+    
+    await pool.query("UPDATE pilotos SET rol = $1 WHERE id = $2", [rol, req.params.id]);
     res.json({ success: true, mensaje: 'Rol actualizado' });
-  });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
-// Cambiar contraseña (Admin o Supervisor)
-router.put('/pilotos/:id/password', verificarToken, (req, res) => {
-  const { id } = req.params;
-  const { newPassword } = req.body;
-  
-  // Permitir acceso a Admin y Supervisor
-  if (req.piloto.rol !== 'Admin' && req.piloto.rol !== 'Supervisor') {
-    return res.status(403).json({ error: 'Acceso denegado' });
-  }
-  
-  if (!newPassword || newPassword.length < 4) {
-    return res.status(400).json({ error: 'Contraseña debe tener al menos 4 caracteres' });
-  }
-  
-  const password_hash = bcrypt.hashSync(newPassword, 10);
-  
-  db.run("UPDATE pilotos SET password_hash = ? WHERE id = ?", [password_hash, id], function(err) {
-    if (err) {
-      console.error('Error al cambiar contraseña:', err);
-      res.status(500).json({ error: err.message });
-      return;
+router.put('/pilotos/:id/password', verificarToken, async (req, res) => {
+  try {
+    if (req.piloto.rol !== 'Admin' && req.piloto.rol !== 'Supervisor') {
+      return res.status(403).json({ error: 'Acceso denegado' });
     }
+    
+    const { newPassword } = req.body;
+    if (!newPassword || newPassword.length < 4) {
+      return res.status(400).json({ error: 'Contraseña debe tener al menos 4 caracteres' });
+    }
+    
+    const password_hash = bcrypt.hashSync(newPassword, 10);
+    await pool.query("UPDATE pilotos SET password_hash = $1 WHERE id = $2", [password_hash, req.params.id]);
     res.json({ success: true, mensaje: 'Contraseña actualizada' });
-  });
-});
-
-// Archivar piloto
-router.put('/pilotos/:id/archivar', verificarToken, esAdmin, (req, res) => {
-  const { id } = req.params;
-  
-  db.run("UPDATE pilotos SET activo = 0 WHERE id = ?", [id], function(err) {
-    if (err) {
-      res.status(500).json({ error: err.message });
-      return;
-    }
-    res.json({ success: true, mensaje: 'Piloto archivado' });
-  });
-});
-
-// Activar piloto
-router.put('/pilotos/:id/activar', verificarToken, esAdmin, (req, res) => {
-  const { id } = req.params;
-  
-  db.run("UPDATE pilotos SET activo = 1 WHERE id = ?", [id], function(err) {
-    if (err) {
-      res.status(500).json({ error: err.message });
-      return;
-    }
-    res.json({ success: true, mensaje: 'Piloto activado' });
-  });
-});
-
-// Eliminar piloto
-router.delete('/pilotos/:id', verificarToken, esAdmin, (req, res) => {
-  const { id } = req.params;
-  
-  if (id === req.piloto.id) {
-    return res.status(400).json({ error: 'No puedes eliminar tu propio usuario' });
+  } catch (error) {
+    console.error('Error al cambiar contraseña:', error);
+    res.status(500).json({ error: error.message });
   }
-  
-  db.run("DELETE FROM pilotos WHERE id = ?", [id], function(err) {
-    if (err) {
-      res.status(500).json({ error: err.message });
-      return;
+});
+
+router.put('/pilotos/:id/archivar', verificarToken, esAdmin, async (req, res) => {
+  try {
+    await pool.query("UPDATE pilotos SET activo = false WHERE id = $1", [req.params.id]);
+    res.json({ success: true, mensaje: 'Piloto archivado' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.put('/pilotos/:id/activar', verificarToken, esAdmin, async (req, res) => {
+  try {
+    await pool.query("UPDATE pilotos SET activo = true WHERE id = $1", [req.params.id]);
+    res.json({ success: true, mensaje: 'Piloto activado' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.delete('/pilotos/:id', verificarToken, esAdmin, async (req, res) => {
+  try {
+    if (req.params.id === req.piloto.id) {
+      return res.status(400).json({ error: 'No puedes eliminar tu propio usuario' });
     }
+    
+    await pool.query("DELETE FROM pilotos WHERE id = $1", [req.params.id]);
     res.json({ success: true, mensaje: 'Piloto eliminado' });
-  });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // ============================================
 // ASCENSOS Y DESCENSOS
 // ============================================
 
-// Obtener historial de ascensos de un piloto
-router.get('/pilotos/:id/historial-ascensos', verificarToken, esAdmin, (req, res) => {
-  const { id } = req.params;
-  
-  db.all(`SELECT h.*, p.nombre_completo as realizado_por_nombre 
-          FROM historial_ascensos h
-          LEFT JOIN pilotos p ON h.realizado_por = p.id
-          WHERE h.piloto_id = ? 
-          ORDER BY h.fecha DESC`, [id], (err, rows) => {
-    if (err) {
-      res.status(500).json({ error: err.message });
-      return;
-    }
-    res.json({ historial: rows });
-  });
-});
-
-// Ascender o degradar piloto
-router.post('/pilotos/:id/cambiar-grado', verificarToken, esAdminOSupervisor, async (req, res) => {
-  const { id } = req.params;
-  const { tipo, motivo } = req.body;
-  
-  if (!tipo || !['ascenso', 'descenso'].includes(tipo)) {
-    return res.status(400).json({ error: 'Tipo debe ser ascenso o descenso' });
-  }
-  
-  // Obtener datos del piloto (incluyendo discord_id y nombre)
-  db.get("SELECT grado_code, discord_id, nombre_completo FROM pilotos WHERE id = ?", [id], (err, pilotoData) => {
-  if (err || !pilotoData) {
-    return res.status(404).json({ error: 'Piloto no encontrado' });
-  }
-  
-  const discordId = pilotoData.discord_id;
-  const piloto_nombre = pilotoData.nombre_completo;
-    
-    db.get("SELECT orden, nombre, code, discord_role_id FROM rangos WHERE code = ?", [gradoActual], (err, rangoActual) => {
-      if (err || !rangoActual) {
-        return res.status(404).json({ error: 'Rango no encontrado' });
-      }
-      
-      let nuevoOrden = rangoActual.orden;
-      if (tipo === 'ascenso') {
-        nuevoOrden = rangoActual.orden + 1;
-      } else {
-        nuevoOrden = rangoActual.orden - 1;
-      }
-      
-      db.get("SELECT code, nombre, discord_role_id FROM rangos WHERE orden = ?", [nuevoOrden], (err, nuevoRango) => {
-        if (err || !nuevoRango) {
-          return res.status(400).json({ error: `No se puede ${tipo}, límite alcanzado` });
-        }
-        
-        db.run("UPDATE pilotos SET grado_code = ? WHERE id = ?", [nuevoRango.code, id], function(err) {
-          if (err) {
-            res.status(500).json({ error: err.message });
-            return;
-          }
-          
-          db.run(`INSERT INTO historial_ascensos (piloto_id, grado_anterior, grado_nuevo, tipo, motivo, realizado_por) 
-                  VALUES (?, ?, ?, ?, ?, ?)`,
-            [id, rangoActual.nombre, nuevoRango.nombre, tipo, motivo || null, req.piloto.id],
-            (err) => {
-              if (err) console.error('Error al guardar historial:', err);
-            }
-          );
-          
-          // ============================================
-          // SINCRONIZACIÓN CON DISCORD (roles)
-          // ============================================
-          (async () => {
-            try {
-              const { asignarRolDiscord, removerRolDiscord } = require('../utils/discord');
-              const rolAnteriorId = rangoActual.discord_role_id;
-              const nuevoRolId = nuevoRango.discord_role_id;
-              
-              // Remover rol anterior SIEMPRE (tanto en ascenso como descenso)
-              if (rolAnteriorId && discordId) {
-                console.log(`🎮 Removiendo rol ${rolAnteriorId} de usuario ${discordId}`);
-                await removerRolDiscord(discordId, rolAnteriorId);
-              }
-              
-              // Asignar nuevo rol SIEMPRE (tanto en ascenso como descenso)
-              if (nuevoRolId && discordId) {
-                console.log(`🎮 Asignando nuevo rol ${nuevoRolId} a usuario ${discordId}`);
-                await asignarRolDiscord(discordId, nuevoRolId);
-              }
-            } catch (discordError) {
-              console.error('❌ Error en sincronización con Discord:', discordError);
-            }
-          })();
-          
-          // ============================================
-          // ENVIAR WEBHOOK DE ASCENSO/DESCENSO
-          // ============================================
-          (async () => {
-            try {
-              const { enviarWebhookAscenso } = require('../utils/webhooks');
-              await enviarWebhookAscenso({
-                tipo: tipo,
-                piloto_nombre: piloto_nombre,
-                piloto_grado: rangoActual.nombre,
-                grado_anterior: rangoActual.nombre,
-                grado_nuevo: nuevoRango.nombre,
-                motivo: motivo || null,
-                realizado_por: `${req.piloto.grado} - ${req.piloto.nombre}`
-              });
-              console.log(`✅ Webhook de ${tipo} enviado a Discord`);
-            } catch (webhookError) {
-              console.error('❌ Error al enviar webhook:', webhookError);
-            }
-          })();
-          
-          res.json({ 
-            success: true, 
-            mensaje: `Piloto ${tipo === 'ascenso' ? 'ascendido' : 'degradado'} a ${nuevoRango.nombre}`,
-            nuevo_grado: nuevoRango.code
-          });
-        });
-      });
-    });
-  });
-});
-          // ============================================
-// SINCRONIZACIÓN CON DISCORD
-// ============================================
-(async () => {
+router.get('/pilotos/:id/historial-ascensos', verificarToken, esAdmin, async (req, res) => {
   try {
-    const { asignarRolDiscord, removerRolDiscord } = require('../utils/discord');
-    const discordId = piloto.discord_id;
-    
-    const rolAnteriorId = rangoActual.discord_role_id;
-    const nuevoRolId = nuevoRango.discord_role_id;
-    
-    if (tipo === 'ascenso') {
-      // Remover rol anterior
-      if (rolAnteriorId && discordId) {
-        console.log(`🎮 Removiendo rol anterior ${rolAnteriorId} de usuario ${discordId}`);
-        await removerRolDiscord(discordId, rolAnteriorId);
-      }
-      
-      // Asignar nuevo rol
-      if (nuevoRolId && discordId) {
-        console.log(`🎮 Asignando nuevo rol ${nuevoRolId} a usuario ${discordId}`);
-        await asignarRolDiscord(discordId, nuevoRolId);
-      }
-    } else if (tipo === 'descenso') {
-      // Remover rol anterior
-      if (rolAnteriorId && discordId) {
-        console.log(`🎮 Removiendo rol anterior ${rolAnteriorId} de usuario ${discordId}`);
-        await removerRolDiscord(discordId, rolAnteriorId);
-      }
-      
-      // Asignar nuevo rol
-      if (nuevoRolId && discordId) {
-        console.log(`🎮 Asignando nuevo rol ${nuevoRolId} a usuario ${discordId}`);
-        await asignarRolDiscord(discordId, nuevoRolId);
-      }
-    }
-  } catch (discordError) {
-    console.error('❌ Error en sincronización con Discord:', discordError);
+    const result = await pool.query(`
+      SELECT h.*, p.nombre_completo as realizado_por_nombre 
+      FROM historial_ascensos h
+      LEFT JOIN pilotos p ON h.realizado_por = p.id
+      WHERE h.piloto_id = $1 
+      ORDER BY h.fecha DESC
+    `, [req.params.id]);
+    res.json({ historial: result.rows });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
-})();
-       
+});
 
+router.post('/pilotos/:id/cambiar-grado', verificarToken, esAdminOSupervisor, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { tipo, motivo } = req.body;
+    
+    if (!tipo || !['ascenso', 'descenso'].includes(tipo)) {
+      return res.status(400).json({ error: 'Tipo debe ser ascenso o descenso' });
+    }
+    
+    // Obtener piloto
+    const pilotoResult = await pool.query(
+      "SELECT grado_code, discord_id, nombre_completo FROM pilotos WHERE id = $1", [id]
+    );
+    if (pilotoResult.rows.length === 0) return res.status(404).json({ error: 'Piloto no encontrado' });
+    
+    const piloto = pilotoResult.rows[0]; // ✅ piloto SÍ está definido aquí
+    const gradoActual = piloto.grado_code;
+    
+    // Obtener rango actual
+    const rangoActualResult = await pool.query(
+      "SELECT orden, nombre, code, discord_role_id FROM rangos WHERE code = $1", [gradoActual]
+    );
+    if (rangoActualResult.rows.length === 0) return res.status(404).json({ error: 'Rango no encontrado' });
+    
+    const rangoActual = rangoActualResult.rows[0];
+    
+    // Calcular nuevo orden
+    let nuevoOrden = tipo === 'ascenso' ? rangoActual.orden + 1 : rangoActual.orden - 1;
+    
+    // Obtener nuevo rango
+    const nuevoRangoResult = await pool.query(
+      "SELECT code, nombre, discord_role_id FROM rangos WHERE orden = $1", [nuevoOrden]
+    );
+    if (nuevoRangoResult.rows.length === 0) {
+      return res.status(400).json({ error: `No se puede ${tipo}, límite alcanzado` });
+    }
+    
+    const nuevoRango = nuevoRangoResult.rows[0];
+    
+    // Actualizar grado
+    await pool.query("UPDATE pilotos SET grado_code = $1 WHERE id = $2", [nuevoRango.code, id]);
+    
+    // Guardar historial
+    await pool.query(
+      `INSERT INTO historial_ascensos (piloto_id, grado_anterior, grado_nuevo, tipo, motivo, realizado_por) 
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [id, rangoActual.nombre, nuevoRango.nombre, tipo, motivo || null, req.piloto.id]
+    );
+    
+    // Sincronización con Discord
+    try {
+      const { asignarRolDiscord, removerRolDiscord } = require('../utils/discord');
+      const discordId = piloto.discord_id;
+      
+      if (rangoActual.discord_role_id && discordId) {
+        console.log(`🎮 Removiendo rol ${rangoActual.discord_role_id} de usuario ${discordId}`);
+        await removerRolDiscord(discordId, rangoActual.discord_role_id);
+      }
+      if (nuevoRango.discord_role_id && discordId) {
+        console.log(`🎮 Asignando nuevo rol ${nuevoRango.discord_role_id} a usuario ${discordId}`);
+        await asignarRolDiscord(discordId, nuevoRango.discord_role_id);
+      }
+    } catch (discordError) {
+      console.error('❌ Error en sincronización con Discord:', discordError);
+    }
+    
+    // Webhook
+    try {
+      const { enviarWebhookAscenso } = require('../utils/webhooks');
+      await enviarWebhookAscenso({
+        tipo,
+        piloto_nombre: piloto.nombre_completo,
+        piloto_grado: rangoActual.nombre,
+        grado_anterior: rangoActual.nombre,
+        grado_nuevo: nuevoRango.nombre,
+        motivo: motivo || null,
+        realizado_por: `${req.piloto.grado} - ${req.piloto.nombre}`
+      });
+      console.log(`✅ Webhook de ${tipo} enviado a Discord`);
+    } catch (webhookError) {
+      console.error('❌ Error al enviar webhook:', webhookError);
+    }
+    
+    res.json({ 
+      success: true, 
+      mensaje: `Piloto ${tipo === 'ascenso' ? 'ascendido' : 'degradado'} a ${nuevoRango.nombre}`,
+      nuevo_grado: nuevoRango.code
+    });
+    
+  } catch (error) {
+    console.error('❌ Error en cambiar-grado:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
 
 // ============================================
 // CERTIFICACIONES
 // ============================================
 
-// Obtener certificaciones de un piloto (Admin, Instructor o Supervisor)
-router.get('/pilotos/:id/certificaciones', verificarToken, (req, res) => {
-  const { id } = req.params;
-  
-  // Permitir acceso a Admin, Instructor y Supervisor
-  if (req.piloto.rol === 'Piloto') {
-    return res.status(403).json({ error: 'Acceso denegado' });
-  }
-  
-  const query = `
-    SELECT c.*, a.modelo, a.tipo, a.id as aeronave_id
-    FROM certificaciones c
-    JOIN aeronaves a ON c.aeronave_id = a.id
-    WHERE c.piloto_id = ?
-    ORDER BY c.fecha_certificacion DESC
-  `;
-  
-  db.all(query, [id], (err, rows) => {
-    if (err) {
-      console.error('Error:', err);
-      res.status(500).json({ error: err.message });
-      return;
-    }
-    res.json({ certificaciones: rows });
-  });
-});
-
-// Certificar a un piloto en una aeronave (Admin o Instructor)
-router.post('/certificar', verificarToken, esAdminOInstructor, async (req, res) => {
-  const { piloto_id, aeronave_id } = req.body;
-  const certificado_por = req.piloto.id;
-  const certificado_por_nombre = req.piloto.nombre;
-  const certificado_por_grado = req.piloto.grado;
-  
-  console.log('📝 Certificando piloto:', { piloto_id, aeronave_id, certificado_por, rol: req.piloto.rol });
-  
-  if (!piloto_id || !aeronave_id) {
-    return res.status(400).json({ error: 'Faltan datos: piloto_id y aeronave_id son requeridos' });
-  }
-  
-  db.get("SELECT nombre_completo, grado_code FROM pilotos WHERE id = ?", [piloto_id], async (err, piloto) => {
-    if (err) {
-      console.error('Error al obtener piloto:', err);
-      return res.status(500).json({ error: err.message });
-    }
-    if (!piloto) {
-      return res.status(404).json({ error: 'Piloto no encontrado' });
+router.get('/pilotos/:id/certificaciones', verificarToken, async (req, res) => {
+  try {
+    if (req.piloto.rol === 'Piloto') {
+      return res.status(403).json({ error: 'Acceso denegado' });
     }
     
-    db.get("SELECT id FROM aeronaves WHERE id = ?", [aeronave_id], (err, aeronave) => {
-      if (err) {
-        console.error('Error al verificar aeronave:', err);
-        return res.status(500).json({ error: err.message });
-      }
-      if (!aeronave) {
-        return res.status(404).json({ error: 'Aeronave no encontrada' });
-      }
-      
-      const query = `INSERT INTO certificaciones (piloto_id, aeronave_id, certificado_por)
-                     VALUES (?, ?, ?)`;
-      
-      db.run(query, [piloto_id, aeronave_id, certificado_por], async function(err) {
-        if (err) {
-  if (err.message.includes('UNIQUE')) {
-
-    // 🔥 Enviar webhook aunque ya esté certificado
-    try {
-      const registroId = getNextRegistroId();
-      await enviarWebhookRegistro({
-        id: registroId,
-        cfi_nombre: certificado_por_nombre,
-        cfi_grado: certificado_por_grado,
-        piloto_nombre: piloto.nombre_completo,
-        piloto_grado: piloto.grado_code,
-        aeronave_id: aeronave_id
-      });
-      console.log('✅ Webhook reenviado (ya certificado)');
-    } catch (webhookError) {
-      console.error('❌ Error webhook:', webhookError);
-    }
-
-    return res.status(200).json({ 
-      success: true, 
-      mensaje: 'Ya estaba certificado pero se registró igual' 
-    });
+    const result = await pool.query(`
+      SELECT c.*, a.modelo, a.tipo, a.id as aeronave_id
+      FROM certificaciones c
+      JOIN aeronaves a ON c.aeronave_id = a.id
+      WHERE c.piloto_id = $1
+      ORDER BY c.fecha_certificacion DESC
+    `, [req.params.id]);
+    
+    res.json({ certificaciones: result.rows });
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).json({ error: error.message });
   }
-          console.error('Error al certificar:', err);
-          res.status(500).json({ error: err.message });
-          return;
-        }
-        
+});
+
+router.post('/certificar', verificarToken, esAdminOInstructor, async (req, res) => {
+  try {
+    const { piloto_id, aeronave_id } = req.body;
+    const certificado_por = req.piloto.id;
+    const certificado_por_nombre = req.piloto.nombre;
+    const certificado_por_grado = req.piloto.grado;
+    
+    console.log('📝 Certificando piloto:', { piloto_id, aeronave_id, certificado_por, rol: req.piloto.rol });
+    
+    if (!piloto_id || !aeronave_id) {
+      return res.status(400).json({ error: 'Faltan datos: piloto_id y aeronave_id son requeridos' });
+    }
+    
+    // Verificar piloto
+    const pilotoResult = await pool.query(
+      "SELECT nombre_completo, grado_code FROM pilotos WHERE id = $1", [piloto_id]
+    );
+    if (pilotoResult.rows.length === 0) return res.status(404).json({ error: 'Piloto no encontrado' });
+    
+    const piloto = pilotoResult.rows[0];
+    
+    // Verificar aeronave
+    const aeronaveResult = await pool.query("SELECT id FROM aeronaves WHERE id = $1", [aeronave_id]);
+    if (aeronaveResult.rows.length === 0) return res.status(404).json({ error: 'Aeronave no encontrada' });
+    
+    // Insertar certificación
+    try {
+      await pool.query(
+        `INSERT INTO certificaciones (piloto_id, aeronave_id, certificado_por) VALUES ($1, $2, $3)`,
+        [piloto_id, aeronave_id, certificado_por]
+      );
+      
+      // Webhook de registro
+      try {
+        const registroId = getNextRegistroId();
+        await enviarWebhookRegistro({
+          id: registroId,
+          cfi_nombre: certificado_por_nombre,
+          cfi_grado: certificado_por_grado,
+          piloto_nombre: piloto.nombre_completo,
+          piloto_grado: piloto.grado_code,
+          aeronave_id: aeronave_id
+        });
+        console.log('✅ Webhook de registro enviado');
+      } catch (webhookError) {
+        console.error('❌ Error al enviar webhook de registro:', webhookError);
+      }
+      
+      console.log('✅ Certificación registrada');
+      res.json({ success: true, mensaje: 'Piloto certificado exitosamente' });
+      
+    } catch (insertError) {
+      if (insertError.message.includes('unique') || insertError.message.includes('duplicate')) {
+        // Ya está certificado
         try {
           const registroId = getNextRegistroId();
           await enviarWebhookRegistro({
@@ -831,71 +593,62 @@ router.post('/certificar', verificarToken, esAdminOInstructor, async (req, res) 
             piloto_grado: piloto.grado_code,
             aeronave_id: aeronave_id
           });
-          console.log('✅ Webhook de registro enviado');
+          console.log('✅ Webhook reenviado (ya certificado)');
         } catch (webhookError) {
-          console.error('❌ Error al enviar webhook de registro:', webhookError);
+          console.error('❌ Error webhook:', webhookError);
         }
         
-        console.log('✅ Certificación registrada con ID:', this.lastID);
-        res.json({ success: true, mensaje: 'Piloto certificado exitosamente' });
-      });
-    });
-  });
-});
-
-
-// Obtener aeronaves certificadas por un piloto
-router.get('/pilotos/:id/aeronaves-certificadas', verificarToken, (req, res) => {
-  const { id } = req.params;
-  
-  const query = `
-    SELECT a.id, a.modelo, a.tipo, a.estado
-    FROM certificaciones c
-    JOIN aeronaves a ON c.aeronave_id = a.id
-    WHERE c.piloto_id = ? AND a.estado = 'Operativa'
-    ORDER BY a.modelo
-  `;
-  
-  db.all(query, [id], (err, rows) => {
-    if (err) {
-      res.status(500).json({ error: err.message });
-      return;
-    }
-    res.json({ aeronaves: rows });
-  });
-});
-
-// Obtener aeronaves autorizadas para libros de vuelo (solo certificadas o con solicitud aprobada)
-router.get('/pilotos/:id/aeronaves-autorizadas', verificarToken, (req, res) => {
-  const { id } = req.params;
-  
-  const query = `
-    SELECT a.id, a.modelo, a.tipo, a.estado, a.nivel,
-           CASE 
-             WHEN c.id IS NOT NULL THEN 'certificada'
-             WHEN s.id IS NOT NULL THEN 'aprobada'
-             ELSE 'ninguna'
-           END as estado_certificacion
-    FROM aeronaves a
-    LEFT JOIN certificaciones c ON a.id = c.aeronave_id AND c.piloto_id = ?
-    LEFT JOIN solicitudes s ON a.id = s.aeronave_solicitada AND s.piloto_id = ? AND s.tipo = 'Certificación' AND s.estado = 'Aprobada'
-    WHERE a.estado = 'Operativa'
-    AND (c.id IS NOT NULL OR s.id IS NOT NULL)
-    ORDER BY 
-      CASE WHEN c.id IS NOT NULL THEN 1 ELSE 2 END,
-      a.nivel ASC,
-      a.modelo ASC
-  `;
-  
-  db.all(query, [id, id], (err, rows) => {
-    if (err) {
-      console.error('Error al obtener aeronaves autorizadas:', err);
-      res.status(500).json({ error: err.message });
-      return;
+        return res.status(200).json({ 
+          success: true, 
+          mensaje: 'Ya estaba certificado pero se registró igual' 
+        });
+      }
+      throw insertError;
     }
     
-    // Transformar para el frontend
-    const aeronaves = rows.map(a => ({
+  } catch (error) {
+    console.error('Error al certificar:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.get('/pilotos/:id/aeronaves-certificadas', verificarToken, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT a.id, a.modelo, a.tipo, a.estado
+      FROM certificaciones c
+      JOIN aeronaves a ON c.aeronave_id = a.id
+      WHERE c.piloto_id = $1 AND a.estado = 'Operativa'
+      ORDER BY a.modelo
+    `, [req.params.id]);
+    
+    res.json({ aeronaves: result.rows });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.get('/pilotos/:id/aeronaves-autorizadas', verificarToken, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT a.id, a.modelo, a.tipo, a.estado, a.nivel,
+             CASE 
+               WHEN c.id IS NOT NULL THEN 'certificada'
+               WHEN s.id IS NOT NULL THEN 'aprobada'
+               ELSE 'ninguna'
+             END as estado_certificacion
+      FROM aeronaves a
+      LEFT JOIN certificaciones c ON a.id = c.aeronave_id AND c.piloto_id = $1
+      LEFT JOIN solicitudes s ON a.id = s.aeronave_solicitada AND s.piloto_id = $1 AND s.tipo = 'Certificación' AND s.estado = 'Aprobada'
+      WHERE a.estado = 'Operativa'
+      AND (c.id IS NOT NULL OR s.id IS NOT NULL)
+      ORDER BY 
+        CASE WHEN c.id IS NOT NULL THEN 1 ELSE 2 END,
+        a.nivel ASC,
+        a.modelo ASC
+    `, [req.params.id]);
+    
+    const aeronaves = result.rows.map(a => ({
       id: a.id,
       modelo: a.modelo,
       tipo: a.tipo,
@@ -905,180 +658,163 @@ router.get('/pilotos/:id/aeronaves-autorizadas', verificarToken, (req, res) => {
     }));
     
     res.json({ aeronaves });
-  });
+  } catch (error) {
+    console.error('Error al obtener aeronaves autorizadas:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
-// Obtener aeronaves disponibles para certificar
-router.get('/pilotos/:id/aeronaves-disponibles', verificarToken, (req, res) => {
-  const { id } = req.params;
-  
-  const query = `
-    SELECT a.id, a.modelo, a.tipo, a.estado, a.nivel
-    FROM aeronaves a
-    WHERE a.estado = 'Operativa'
-    AND a.id NOT IN (
-      SELECT aeronave_id FROM certificaciones WHERE piloto_id = ?
-    )
-    AND a.id NOT IN (
-      SELECT aeronave_solicitada FROM solicitudes 
-      WHERE piloto_id = ? 
-      AND tipo = 'Certificación'
-      AND estado IN ('Aprobada', 'Certificada', 'Pendiente')
-      AND aeronave_solicitada IS NOT NULL
-    )
-    ORDER BY 
-      CASE a.nivel
-        WHEN 'Básico' THEN 1
-        WHEN 'Intermedio' THEN 2
-        WHEN 'Avanzado' THEN 3
-        ELSE 4
-      END,
-      a.modelo ASC
-  `;
-  
-  db.all(query, [id, id], (err, rows) => {
-    if (err) {
-      console.error('Error al obtener aeronaves disponibles:', err);
-      res.status(500).json({ error: err.message });
-      return;
-    }
-    res.json({ aeronaves: rows });
-  });
+router.get('/pilotos/:id/aeronaves-disponibles', verificarToken, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT a.id, a.modelo, a.tipo, a.estado, a.nivel
+      FROM aeronaves a
+      WHERE a.estado = 'Operativa'
+      AND a.id NOT IN (
+        SELECT aeronave_id FROM certificaciones WHERE piloto_id = $1
+      )
+      AND a.id NOT IN (
+        SELECT aeronave_solicitada FROM solicitudes 
+        WHERE piloto_id = $1 
+        AND tipo = 'Certificación'
+        AND estado IN ('Aprobada', 'Certificada', 'Pendiente')
+        AND aeronave_solicitada IS NOT NULL
+      )
+      ORDER BY 
+        CASE a.nivel
+          WHEN 'Básico' THEN 1
+          WHEN 'Intermedio' THEN 2
+          WHEN 'Avanzado' THEN 3
+          ELSE 4
+        END,
+        a.modelo ASC
+    `, [req.params.id]);
+    
+    res.json({ aeronaves: result.rows });
+  } catch (error) {
+    console.error('Error al obtener aeronaves disponibles:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // ============================================
 // GESTIÓN DE AERONAVES
 // ============================================
 
-// Obtener todas las aeronaves
-router.get('/aeronaves', verificarToken, esAdminOnly, (req, res) => {
-  const query = `
-    SELECT * FROM aeronaves 
-    ORDER BY 
-      CASE nivel
-        WHEN 'Básico' THEN 1
-        WHEN 'Intermedio' THEN 2
-        WHEN 'Avanzado' THEN 3
-        ELSE 4
-      END,
-      tipo ASC,
-      id ASC
-  `;
-  
-  db.all(query, [], (err, rows) => {
-    if (err) {
-      res.status(500).json({ error: err.message });
-      return;
-    }
-    res.json({ aeronaves: rows });
-  });
-});
-
-// Obtener una aeronave específica
-router.get('/aeronaves/:id', verificarToken, esAdmin, (req, res) => {
-  const { id } = req.params;
-  db.get("SELECT * FROM aeronaves WHERE id = ?", [id], (err, row) => {
-    if (err) {
-      res.status(500).json({ error: err.message });
-      return;
-    }
-    if (!row) {
-      res.status(404).json({ error: 'Aeronave no encontrada' });
-      return;
-    }
-    res.json({ aeronave: row });
-  });
-});
-
-// Agregar aeronave
-router.post('/aeronaves', verificarToken, esAdminOnly, (req, res) => {
-  const { id, modelo, nivel, tipo, estado, imagen_url } = req.body;
-  
-  if (!id || !modelo || !nivel || !tipo) {
-    return res.status(400).json({ error: 'Faltan campos requeridos' });
+router.get('/aeronaves', verificarToken, esAdminOnly, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT * FROM aeronaves 
+      ORDER BY 
+        CASE nivel
+          WHEN 'Básico' THEN 1
+          WHEN 'Intermedio' THEN 2
+          WHEN 'Avanzado' THEN 3
+          ELSE 4
+        END,
+        tipo ASC,
+        id ASC
+    `);
+    res.json({ aeronaves: result.rows });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
-  
-  db.run(`INSERT INTO aeronaves (id, modelo, nivel, tipo, estado, imagen_url) VALUES (?, ?, ?, ?, ?, ?)`,
-    [id, modelo, nivel, tipo, estado || 'Operativa', imagen_url || null],
-    function(err) {
-      if (err) {
-        res.status(500).json({ error: err.message });
-        return;
-      }
-      res.json({ success: true, mensaje: 'Aeronave agregada', id });
-    }
-  );
 });
 
-// Actualizar aeronave
-router.put('/aeronaves/:id', verificarToken, esAdminOnly, (req, res) => {
-  const { id } = req.params;
-  const { modelo, nivel, tipo, estado, imagen_url } = req.body;
-  
-  db.run(`UPDATE aeronaves SET modelo = ?, nivel = ?, tipo = ?, estado = ?, imagen_url = ? WHERE id = ?`,
-    [modelo, nivel, tipo, estado, imagen_url, id],
-    function(err) {
-      if (err) {
-        res.status(500).json({ error: err.message });
-        return;
-      }
-      res.json({ success: true, mensaje: 'Aeronave actualizada' });
-    }
-  );
+router.get('/aeronaves/:id', verificarToken, esAdmin, async (req, res) => {
+  try {
+    const result = await pool.query("SELECT * FROM aeronaves WHERE id = $1", [req.params.id]);
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Aeronave no encontrada' });
+    res.json({ aeronave: result.rows[0] });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
-// Eliminar aeronave
-router.delete('/aeronaves/:id', verificarToken, esAdminOnly, (req, res) => {
-  const { id } = req.params;
-  
-  db.run("DELETE FROM aeronaves WHERE id = ?", [id], function(err) {
-    if (err) {
-      res.status(500).json({ error: err.message });
-      return;
+router.post('/aeronaves', verificarToken, esAdminOnly, async (req, res) => {
+  try {
+    const { id, modelo, nivel, tipo, estado, imagen_url } = req.body;
+    if (!id || !modelo || !nivel || !tipo) {
+      return res.status(400).json({ error: 'Faltan campos requeridos' });
     }
+    
+    await pool.query(
+      `INSERT INTO aeronaves (id, modelo, nivel, tipo, estado, imagen_url) VALUES ($1, $2, $3, $4, $5, $6)`,
+      [id, modelo, nivel, tipo, estado || 'Operativa', imagen_url || null]
+    );
+    res.json({ success: true, mensaje: 'Aeronave agregada', id });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.put('/aeronaves/:id', verificarToken, esAdminOnly, async (req, res) => {
+  try {
+    const { modelo, nivel, tipo, estado, imagen_url } = req.body;
+    await pool.query(
+      `UPDATE aeronaves SET modelo = $1, nivel = $2, tipo = $3, estado = $4, imagen_url = $5 WHERE id = $6`,
+      [modelo, nivel, tipo, estado, imagen_url, req.params.id]
+    );
+    res.json({ success: true, mensaje: 'Aeronave actualizada' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.delete('/aeronaves/:id', verificarToken, esAdminOnly, async (req, res) => {
+  try {
+    await pool.query("DELETE FROM aeronaves WHERE id = $1", [req.params.id]);
     res.json({ success: true, mensaje: 'Aeronave eliminada' });
-  });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // ============================================
 // ESTADÍSTICAS
 // ============================================
 
-router.get('/stats', verificarToken, esAdmin, (req, res) => {
-  const stats = {};
-  
-  db.get("SELECT COUNT(*) as total FROM pilotos WHERE activo = 1 OR activo IS NULL", [], (err, row) => {
-    if (err) return res.status(500).json({ error: err.message });
-    stats.totalPilotos = row.total;
+router.get('/stats', verificarToken, esAdmin, async (req, res) => {
+  try {
+    const [
+      totalPilotos,
+      totalAeronaves,
+      solicitudesPendientes,
+      totalVuelos
+    ] = await Promise.all([
+      pool.query("SELECT COUNT(*) as total FROM pilotos WHERE activo = true OR activo IS NULL"),
+      pool.query("SELECT COUNT(*) as total FROM aeronaves"),
+      pool.query("SELECT COUNT(*) as total FROM solicitudes WHERE estado = 'Pendiente'"),
+      pool.query("SELECT COUNT(*) as total FROM libros_vuelo")
+    ]);
     
-    db.get("SELECT COUNT(*) as total FROM aeronaves", [], (err, row) => {
-      if (err) return res.status(500).json({ error: err.message });
-      stats.totalAeronaves = row.total;
-      
-      db.get("SELECT COUNT(*) as total FROM solicitudes WHERE estado = 'Pendiente'", [], (err, row) => {
-        if (err) return res.status(500).json({ error: err.message });
-        stats.solicitudesPendientes = row.total;
-        
-        db.get("SELECT COUNT(*) as total FROM libros_vuelo", [], (err, row) => {
-          if (err) return res.status(500).json({ error: err.message });
-          stats.totalVuelos = row.total;
-          
-          res.json({ stats });
-        });
-      });
+    res.json({ 
+      stats: {
+        totalPilotos: totalPilotos.rows[0].total,
+        totalAeronaves: totalAeronaves.rows[0].total,
+        solicitudesPendientes: solicitudesPendientes.rows[0].total,
+        totalVuelos: totalVuelos.rows[0].total
+      }
     });
-  });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
-// Obtener rangos (público para todos los usuarios autenticados)
-router.get('/rangos-public', verificarToken, (req, res) => {
-  db.all("SELECT code, nombre, logo_url FROM rangos ORDER BY orden ASC", [], (err, rows) => {
-    if (err) {
-      console.error('Error al obtener rangos públicos:', err);
-      res.status(500).json({ error: err.message });
-      return;
-    }
-    res.json({ ranks: rows });
-  });
+
+// Obtener rangos públicos
+router.get('/rangos-public', verificarToken, async (req, res) => {
+  try {
+    const result = await pool.query("SELECT code, nombre, logo_url FROM rangos ORDER BY orden ASC");
+    res.json({ ranks: result.rows });
+  } catch (error) {
+    console.error('Error al obtener rangos públicos:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
+
+// ============================================
+// ❌ ELIMINADO: Bloque huérfano que causaba el error
+// Ya NO hay código fuera de los routers
+// ============================================
 
 module.exports = router;

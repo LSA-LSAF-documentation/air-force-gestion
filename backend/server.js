@@ -2,7 +2,6 @@
 process.env.TZ = 'UTC';
 console.log('🕐 Zona horaria configurada a:', new Date().toString());
 
-
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
@@ -12,8 +11,7 @@ const fs = require('fs');
 // Cargar variables de entorno
 dotenv.config();
 
-// Importar base de datos
-//const db = require('./config/database');
+// Importar base de datos (Supabase/PostgreSQL)
 const pool = require('./config/supabase');
 
 // Importar rutas
@@ -86,6 +84,7 @@ app.get('/', (req, res) => {
   res.json({ 
     mensaje: '🚁 API de la Fuerza Aérea funcionando correctamente',
     version: '1.0.0',
+    base_de_datos: 'Supabase PostgreSQL',
     endpoints_disponibles: {
       auth: 'POST /api/login',
       aeronaves: 'GET /api/aeronaves',
@@ -97,18 +96,24 @@ app.get('/', (req, res) => {
   });
 });
 
-// Ruta de prueba para ver la base de datos (solo para desarrollo)
-app.get('/api/test-db', (req, res) => {
-  db.all("SELECT id, nombre_completo, grado_code, email, rol FROM pilotos LIMIT 5", [], (err, rows) => {
-    if (err) {
-      res.status(500).json({ error: err.message });
-      return;
-    }
+// Ruta de prueba para ver la base de datos
+app.get('/api/test-db', async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT id, nombre_completo, grado_code, email, rol FROM pilotos LIMIT 5'
+    );
     res.json({ 
-      mensaje: 'Conexión a DB exitosa', 
-      pilotos: rows.map(p => ({ ...p, password_hash: '[OCULTO]' }))
+      mensaje: '✅ Conexión a Supabase exitosa', 
+      total_pilotos: result.rows.length,
+      pilotos: result.rows.map(p => ({ ...p, password_hash: '[OCULTO]' }))
     });
-  });
+  } catch (error) {
+    console.error('❌ Error en test-db:', error);
+    res.status(500).json({ 
+      error: 'Error de conexión a la base de datos',
+      mensaje: error.message 
+    });
+  }
 });
 
 // ============================================
@@ -148,6 +153,7 @@ const server = app.listen(PORT, () => {
 ║  Servidor corriendo en: http://localhost:${PORT}          ║
 ║  API disponible en: http://localhost:${PORT}/api          ║
 ║  Imágenes estáticas en: http://localhost:${PORT}/uploads  ║
+║  Base de datos: Supabase PostgreSQL                     ║
 ╚══════════════════════════════════════════════════════════╝
   `);
 });
@@ -160,7 +166,5 @@ process.on('SIGINT', () => {
     process.exit(0);
   });
 });
-
-
 
 module.exports = app;
