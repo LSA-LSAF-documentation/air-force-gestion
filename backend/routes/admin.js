@@ -220,7 +220,7 @@ router.get('/pilotos', verificarToken, esAdminOSupervisor, async (req, res) => {
     `;
     
     if (incluirInactivos !== 'true') {
-      query += " WHERE p.activo = true OR p.activo IS NULL ";
+      query += " WHERE p.activo = 1 OR p.activo IS NULL ";
     }
     
     query += `
@@ -361,7 +361,7 @@ router.put('/pilotos/:id/password', verificarToken, async (req, res) => {
 
 router.put('/pilotos/:id/archivar', verificarToken, esAdmin, async (req, res) => {
   try {
-    await pool.query("UPDATE pilotos SET activo = false WHERE id = $1", [req.params.id]);
+    await pool.query("UPDATE pilotos SET activo = 0 WHERE id = $1", [req.params.id]);
     res.json({ success: true, mensaje: 'Piloto archivado' });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -370,7 +370,7 @@ router.put('/pilotos/:id/archivar', verificarToken, esAdmin, async (req, res) =>
 
 router.put('/pilotos/:id/activar', verificarToken, esAdmin, async (req, res) => {
   try {
-    await pool.query("UPDATE pilotos SET activo = true WHERE id = $1", [req.params.id]);
+    await pool.query("UPDATE pilotos SET activo = 1 WHERE id = $1", [req.params.id]);
     res.json({ success: true, mensaje: 'Piloto activado' });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -782,7 +782,7 @@ router.get('/stats', verificarToken, esAdmin, async (req, res) => {
       solicitudesPendientes,
       totalVuelos
     ] = await Promise.all([
-      pool.query("SELECT COUNT(*) as total FROM pilotos WHERE activo = true OR activo IS NULL"),
+      pool.query("SELECT COUNT(*) as total FROM pilotos WHERE activo = 1 OR activo IS NULL"),
       pool.query("SELECT COUNT(*) as total FROM aeronaves"),
       pool.query("SELECT COUNT(*) as total FROM solicitudes WHERE estado = 'Pendiente'"),
       pool.query("SELECT COUNT(*) as total FROM libros_vuelo")

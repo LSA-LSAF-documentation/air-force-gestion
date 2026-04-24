@@ -16,7 +16,7 @@ router.get('/', verificarToken, async (req, res) => {
              r.nombre as grado_nombre, r.orden as grado_orden
       FROM pilotos p
       LEFT JOIN rangos r ON p.grado_code = r.code
-      WHERE p.activo = true OR p.activo IS NULL
+      WHERE p.activo = 1 OR p.activo IS NULL
       ORDER BY r.orden DESC, p.nombre_completo ASC
     `;
     
