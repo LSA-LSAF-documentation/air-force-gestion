@@ -779,7 +779,7 @@ async function verificarRolPeriodicamente() {
     }
     
     try {
-        const response = await fetch(`http://localhost:3000/api/pilotos/${pilotoData.id}`, {
+        const response = await fetch(`/api/pilotos/${pilotoData.id}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -809,7 +809,7 @@ async function verificarRolPeriodicamente() {
 // Verificar rol al cargar la página
 async function verificarRolAlCargar(token, pilotoId, rolActual) {
     try {
-        const response = await fetch(`http://localhost:3000/api/pilotos/${pilotoId}`, {
+        const response = await fetch(`/api/pilotos/${pilotoId}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -918,7 +918,7 @@ async function verificarRolAlCargar(token, pilotoId, rolActual) {
     const token = localStorage.getItem('token');
     try {
         // Usar el endpoint público que funciona para Admin y Supervisor
-        const response = await fetch('http://localhost:3000/api/admin/rangos-public', {
+        const response = await fetch('/api/admin/rangos-public', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await response.json();
@@ -952,7 +952,7 @@ async function verificarRolAlCargar(token, pilotoId, rolActual) {
             
             return new Promise((resolve, reject) => {
                 const xhr = new XMLHttpRequest();
-                xhr.open('POST', `http://localhost:3000/api/admin/upload/${endpoint}/${id}`, true);
+                xhr.open('POST', `/api/admin/upload/${endpoint}/${id}`, true);
                 xhr.setRequestHeader('Authorization', `Bearer ${token}`);
                 
                 xhr.upload.onprogress = function(e) {
@@ -995,7 +995,7 @@ async function cargarPilotos() {
     tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">Cargando...';
     
     try {
-        const res = await fetch(`http://localhost:3000/api/admin/pilotos?incluirInactivos=${incluirInactivos}`, {
+        const res = await fetch(`/api/admin/pilotos?incluirInactivos=${incluirInactivos}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -1104,7 +1104,7 @@ const archivarBtn = ((esAdmin || (esSupervisor && !esAdminObjetivo)) && estaActi
     const esMismoUsuario = pilotoActualLogueado.id === id;
     
     try {
-        const res = await fetch(`http://localhost:3000/api/admin/pilotos/${id}/rol`, {
+        const res = await fetch(`/api/admin/pilotos/${id}/rol`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
             body: JSON.stringify({ rol: nuevoRol })
@@ -1168,7 +1168,7 @@ function mostrarModalSesionExpirada(mensajePersonalizado = null) {
     }
     
     try {
-        const response = await fetch(`http://localhost:3000/api/admin/pilotos/${id}`, {
+        const response = await fetch(`/api/admin/pilotos/${id}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -1204,7 +1204,7 @@ function mostrarModalSesionExpirada(mensajePersonalizado = null) {
     const token = localStorage.getItem('token');
     
     try {
-        const res = await fetch(`http://localhost:3000/api/admin/pilotos/${id}/cambiar-grado`, {
+        const res = await fetch(`/api/admin/pilotos/${id}/cambiar-grado`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
             body: JSON.stringify({ tipo: 'ascenso', motivo: motivo || null })
@@ -1233,7 +1233,7 @@ async function degradarPiloto(id) {
     const token = localStorage.getItem('token');
     
     try {
-        const res = await fetch(`http://localhost:3000/api/admin/pilotos/${id}/cambiar-grado`, {
+        const res = await fetch(`/api/admin/pilotos/${id}/cambiar-grado`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
             body: JSON.stringify({ tipo: 'descenso', motivo: motivo || null })
@@ -1265,7 +1265,7 @@ async function degradarPiloto(id) {
     const esMismoUsuario = pilotoActualLogueado.id === id;
     
     try {
-        const res = await fetch(`http://localhost:3000/api/admin/pilotos/${id}/archivar`, {
+        const res = await fetch(`/api/admin/pilotos/${id}/archivar`, {
             method: 'PUT',
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -1303,7 +1303,7 @@ async function degradarPiloto(id) {
     const token = localStorage.getItem('token');
     
     try {
-        const res = await fetch(`http://localhost:3000/api/admin/pilotos/${id}/activar`, {
+        const res = await fetch(`/api/admin/pilotos/${id}/activar`, {
             method: 'PUT',
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -1324,7 +1324,7 @@ async function degradarPiloto(id) {
         async function eliminarPiloto(id) {
             if (!confirm('¿Eliminar este piloto permanentemente?')) return;
             const token = localStorage.getItem('token');
-            const res = await fetch(`http://localhost:3000/api/admin/pilotos/${id}`, {
+            const res = await fetch(`/api/admin/pilotos/${id}`, {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -1347,7 +1347,7 @@ async function degradarPiloto(id) {
             tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">Cargando...</tbody>';
             
             try {
-                const res = await fetch('http://localhost:3000/api/admin/aeronaves', {
+                const res = await fetch('/api/admin/aeronaves', {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 const data = await res.json();
@@ -1381,7 +1381,7 @@ async function degradarPiloto(id) {
             const token = localStorage.getItem('token');
             
             try {
-                const response = await fetch(`http://localhost:3000/api/admin/aeronaves/${encodeURIComponent(id)}`, {
+                const response = await fetch(`/api/admin/aeronaves/${encodeURIComponent(id)}`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 
@@ -1419,7 +1419,7 @@ async function degradarPiloto(id) {
             const token = localStorage.getItem('token');
             
             try {
-                const response = await fetch(`http://localhost:3000/api/admin/aeronaves/${encodeURIComponent(id)}`, {
+                const response = await fetch(`/api/admin/aeronaves/${encodeURIComponent(id)}`, {
                     method: 'DELETE',
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
@@ -1450,7 +1450,7 @@ async function degradarPiloto(id) {
     if (!rangosEditables || rangosEditables.length === 0) {
         // Solo cargar desde servidor si está vacío
         const token = localStorage.getItem('token');
-        const res = await fetch('http://localhost:3000/api/admin/rangos', {
+        const res = await fetch('/api/admin/rangos', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
@@ -1493,7 +1493,7 @@ async function degradarPiloto(id) {
         const token = localStorage.getItem('token');
         
         try {
-            const response = await fetch(`http://localhost:3000/api/admin/upload/rango/${rangoId}`, {
+            const response = await fetch(`/api/admin/upload/rango/${rangoId}`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`
@@ -1561,7 +1561,7 @@ async function degradarPiloto(id) {
     }
     
     const token = localStorage.getItem('token');
-    const response = await fetch('http://localhost:3000/api/admin/rangos', {
+    const response = await fetch('/api/admin/rangos', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ ranks: nuevosRangos })
@@ -1587,7 +1587,7 @@ async function degradarPiloto(id) {
         
         async function cargarStats() {
             const token = localStorage.getItem('token');
-            const res = await fetch('http://localhost:3000/api/admin/stats', { headers: { 'Authorization': `Bearer ${token}` } });
+            const res = await fetch('/api/admin/stats', { headers: { 'Authorization': `Bearer ${token}` } });
             const data = await res.json();
             document.getElementById('statsContainer').innerHTML = `
                 <div class="stat-card-admin"><div class="stat-number">${data.stats.totalPilotos}</div><div class="stat-label">Pilotos Activos</div></div>
@@ -1725,7 +1725,7 @@ async function degradarPiloto(id) {
                 foto_url: document.getElementById('piloto_foto').value || null
             };
             
-            const res = await fetch('http://localhost:3000/api/admin/pilotos', {
+            const res = await fetch('/api/admin/pilotos', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify(data)
@@ -1754,7 +1754,7 @@ async function degradarPiloto(id) {
         discord_id: document.getElementById('edit_piloto_discord_id').value || null
     };
     
-    const res = await fetch(`http://localhost:3000/api/admin/pilotos/${id}`, {
+    const res = await fetch(`/api/admin/pilotos/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify(data)
@@ -1789,7 +1789,7 @@ async function degradarPiloto(id) {
                 imagen_url: document.getElementById('aeronave_imagen').value || null
             };
             
-            const res = await fetch('http://localhost:3000/api/admin/aeronaves', {
+            const res = await fetch('/api/admin/aeronaves', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify(data)
@@ -1819,7 +1819,7 @@ async function degradarPiloto(id) {
                 imagen_url: document.getElementById('edit_aeronave_imagen').value || null
             };
             
-            const res = await fetch(`http://localhost:3000/api/admin/aeronaves/${id}`, {
+            const res = await fetch(`/api/admin/aeronaves/${id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify(data)
@@ -1838,7 +1838,7 @@ async function degradarPiloto(id) {
         document.getElementById('formPassword').addEventListener('submit', async (e) => {
             e.preventDefault();
             const token = localStorage.getItem('token');
-            const res = await fetch(`http://localhost:3000/api/admin/pilotos/${pilotoIdSeleccionado}/password`, {
+            const res = await fetch(`/api/admin/pilotos/${pilotoIdSeleccionado}/password`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify({ newPassword: document.getElementById('newPassword').value })
@@ -1889,7 +1889,7 @@ async function degradarPiloto(id) {
             const token = localStorage.getItem('token');
             const id = pilotoActual.id;
             
-            const res = await fetch(`http://localhost:3000/api/admin/pilotos/${id}`, {
+            const res = await fetch(`/api/admin/pilotos/${id}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const data = await res.json();
@@ -1950,7 +1950,7 @@ function iniciarVerificacionPeriodica() {
         if (pilotoData.rol === 'Admin') return;
         
         try {
-            const response = await fetch(`http://localhost:3000/api/pilotos/${pilotoData.id}`, {
+            const response = await fetch(`/api/pilotos/${pilotoData.id}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             
