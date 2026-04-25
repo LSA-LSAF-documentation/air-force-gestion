@@ -1833,7 +1833,7 @@ async function degradarPiloto(id) {
                 imagen_url: document.getElementById('edit_aeronave_imagen').value || null
             };
             
-            const res = await fetch(`/api/admin/aeronaves/${id}`, {
+            const res = await fetch(`/api/admin/aeronaves/${encodeURIComponent(id)}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify(data)
