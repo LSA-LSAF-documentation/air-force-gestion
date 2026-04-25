@@ -462,7 +462,7 @@
     if (pilotoActual.foto_url && pilotoActual.foto_url !== '') {
         let fotoUrl = pilotoActual.foto_url;
         if (!fotoUrl.startsWith('http')) {
-            fotoUrl = `http://localhost:3000${fotoUrl}`;
+            fotoUrl = `${API_BASE_URL}${fotoUrl}`;
         }
         avatarImg.style.display = 'block';
         avatarTexto.style.display = 'none';
