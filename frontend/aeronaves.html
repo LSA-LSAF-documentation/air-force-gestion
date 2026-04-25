@@ -699,7 +699,7 @@ function iniciarVerificacionPeriodica() {
             console.log('Es Admin, omitiendo verificación');
             return;
         }
-        
+         
         try {
             const response = await fetch(`/api/pilotos/${pilotoData.id}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
