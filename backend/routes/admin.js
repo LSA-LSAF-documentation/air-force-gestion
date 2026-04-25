@@ -755,12 +755,30 @@ router.post('/aeronaves', verificarToken, esAdminOnly, async (req, res) => {
 router.put('/aeronaves/:id', verificarToken, esAdminOnly, async (req, res) => {
   try {
     const { modelo, nivel, tipo, estado, imagen_url } = req.body;
-    await pool.query(
+    
+    // ✅ DEBUG
+    console.log('📦 BODY COMPLETO:', JSON.stringify(req.body));
+    
+    if (!imagen_url) {
+      console.log('❌ imagen_url está VACÍO o NULL');
+    } else {
+      console.log('✅ imagen_url recibido:', imagen_url);
+    }
+    
+    const result = await pool.query(
       `UPDATE aeronaves SET modelo = $1, nivel = $2, tipo = $3, estado = $4, imagen_url = $5 WHERE id = $6`,
       [modelo, nivel, tipo, estado, imagen_url, req.params.id]
     );
+    
+    console.log('📝 Filas actualizadas:', result.rowCount);
+    
+    // Verificar si se guardó
+    const verify = await pool.query("SELECT imagen_url FROM aeronaves WHERE id = $1", [req.params.id]);
+    console.log('🗄️ En BD ahora:', verify.rows[0]?.imagen_url);
+    
     res.json({ success: true, mensaje: 'Aeronave actualizada' });
   } catch (error) {
+    console.error('❌ ERROR:', error.message);
     res.status(500).json({ error: error.message });
   }
 });

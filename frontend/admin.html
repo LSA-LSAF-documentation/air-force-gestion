@@ -1818,28 +1818,23 @@ async function degradarPiloto(id) {
         });
         
         document.getElementById('formEditarAeronave').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const id = document.getElementById('edit_aeronave_id').value;
-    const token = localStorage.getItem('token');
-    
-    const imagen_url = document.getElementById('edit_aeronave_imagen').value;
-    
-    // ✅ FORZAR que se vea en pantalla
-    alert('🖼️ imagen_url a enviar: ' + imagen_url);
-    
-    const data = {
-        modelo: document.getElementById('edit_aeronave_modelo').value,
-        nivel: document.getElementById('edit_aeronave_nivel').value,
-        tipo: document.getElementById('edit_aeronave_tipo').value,
-        estado: document.getElementById('edit_aeronave_estado').value,
-        imagen_url: imagen_url || null
-    };
-    
-    const res = await fetch(`/api/admin/aeronaves/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify(data)
-    });
+            e.preventDefault();
+            const id = document.getElementById('edit_aeronave_id').value;
+            const token = localStorage.getItem('token');
+            
+            const data = {
+                modelo: document.getElementById('edit_aeronave_modelo').value,
+                nivel: document.getElementById('edit_aeronave_nivel').value,
+                tipo: document.getElementById('edit_aeronave_tipo').value,
+                estado: document.getElementById('edit_aeronave_estado').value,
+                imagen_url: document.getElementById('edit_aeronave_imagen').value || null
+            };
+            
+            const res = await fetch(`/api/admin/aeronaves/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify(data)
+            });
             
             if (res.ok) {
                 mostrarAlerta('Aeronave actualizada', 'success');
