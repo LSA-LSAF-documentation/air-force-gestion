@@ -431,7 +431,7 @@ function mostrarAlerta(mensaje, tipo = 'info') {
     if (pilotoActual.foto_url && pilotoActual.foto_url !== '') {
         let fotoUrl = pilotoActual.foto_url;
         if (!fotoUrl.startsWith('http')) {
-            fotoUrl = `http://localhost:3000${fotoUrl}`;
+            fotoUrl = `${API_BASE_URL}${fotoUrl}`;
         }
         avatarImg.style.display = 'block';
         avatarTexto.style.display = 'none';
@@ -578,7 +578,7 @@ mostrarAlerta('Error al actualizar rol', 'error');
                                 ${aeronaves.map(a => {
                                     const tieneImagen = a.imagen_url && a.imagen_url.trim() !== '';
                                     const imagenUrl = tieneImagen 
-    ? (a.imagen_url.startsWith('http') ? a.imagen_url : `http://localhost:3000${a.imagen_url}`)
+    ? (a.imagen_url.startsWith('http') ? a.imagen_url : `${API_BASE_URL}${a.imagen_url}`)
     : null;
                                     const nivelIcono = getNivelIcono(a.nivel);
                                     const nivelColor = getNivelColor(a.nivel);
@@ -732,7 +732,7 @@ function iniciarVerificacionPeriodica() {
 }
 if (verificarAutenticacion()) {
     cargarAeronaves();
-    iniciarVerificacionPeriodica();  // ← Agregar esta línea
+    //iniciarVerificacionPeriodica();  // ← Agregar esta línea
 }
 // Llamar a la función después de verificar autenticación
 // Agrega esta línea al final del init() o después de verificarAutenticacion()
