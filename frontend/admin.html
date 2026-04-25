@@ -1390,7 +1390,10 @@ async function degradarPiloto(id) {
         async function editarAeronave(id) {
             console.log('📝 Editando aeronave ID:', id);
             const token = localStorage.getItem('token');
-            
+            console.log('📝 Editando aeronave ID:', id);
+
+            document.getElementById('edit_aeronave_id').value = a.id;
+    console.log('📝 ID guardado en hidden:', document.getElementById('edit_aeronave_id').value);
             try {
                 const response = await fetch(`/api/admin/aeronaves/${encodeURIComponent(id)}`, {
                     headers: { 'Authorization': `Bearer ${token}` }
