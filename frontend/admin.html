@@ -1388,44 +1388,44 @@ async function degradarPiloto(id) {
         }
         
         async function editarAeronave(id) {
-            console.log('📝 Editando aeronave ID:', id);
-            const token = localStorage.getItem('token');
-            console.log('📝 Editando aeronave ID:', id);
-
-            document.getElementById('edit_aeronave_id').value = a.id;
-    console.log('📝 ID guardado en hidden:', document.getElementById('edit_aeronave_id').value);
-            try {
-                const response = await fetch(`/api/admin/aeronaves/${encodeURIComponent(id)}`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                
-                if (!response.ok) {
-                    const error = await response.json();
-                    mostrarAlerta(error.error || 'No se pudo cargar la aeronave', 'error');
-                    return;
-                }
-                
-                const data = await response.json();
-                
-                if (!data.aeronave) {
-                    mostrarAlerta('Aeronave no encontrada', 'error')
-                    return;
-                }
-                
-                const a = data.aeronave;
-                document.getElementById('edit_aeronave_id').value = a.id;
-                document.getElementById('edit_aeronave_modelo').value = a.modelo;
-                document.getElementById('edit_aeronave_nivel').value = a.nivel || 'Básico';
-                document.getElementById('edit_aeronave_tipo').value = a.tipo || 'Ala fija';
-                document.getElementById('edit_aeronave_estado').value = a.estado;
-                document.getElementById('edit_aeronave_imagen').value = a.imagen_url || '';
-                
-                document.getElementById('modalEditarAeronave').style.display = 'flex';
-            } catch (error) {
-                console.error('Error:', error);
-                mostrarAlerta('Error al cargar la aeronave', 'error');
-            }
+    console.log('📝 Editando aeronave ID:', id);
+    const token = localStorage.getItem('token');
+    
+    try {
+        const response = await fetch(`/api/admin/aeronaves/${encodeURIComponent(id)}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            mostrarAlerta(error.error || 'No se pudo cargar la aeronave', 'error');
+            return;
         }
+        
+        const data = await response.json();
+        
+        if (!data.aeronave) {
+            mostrarAlerta('Aeronave no encontrada', 'error');
+            return;
+        }
+        
+        const a = data.aeronave;  // ✅ Se define UNA SOLA VEZ, después del if
+        
+        document.getElementById('edit_aeronave_id').value = a.id;
+        document.getElementById('edit_aeronave_modelo').value = a.modelo;
+        document.getElementById('edit_aeronave_nivel').value = a.nivel || 'Básico';
+        document.getElementById('edit_aeronave_tipo').value = a.tipo || 'Ala fija';
+        document.getElementById('edit_aeronave_estado').value = a.estado;
+        document.getElementById('edit_aeronave_imagen').value = a.imagen_url || '';
+        
+        console.log('📝 ID guardado en hidden:', a.id);
+        
+        document.getElementById('modalEditarAeronave').style.display = 'flex';
+    } catch (error) {
+        console.error('Error:', error);
+        mostrarAlerta('Error al cargar la aeronave', 'error');
+    }
+}
         
         async function eliminarAeronave(id) {
             if (!confirm('¿Estás seguro de eliminar esta aeronave?')) return;
