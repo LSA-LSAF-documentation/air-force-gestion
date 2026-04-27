@@ -164,25 +164,33 @@ router.put('/rangos', verificarToken, esAdminOnly, async (req, res) => {
     if (!ranks || !Array.isArray(ranks)) return res.status(400).json({ error: 'Datos inválidos' });
     if (ranks.length === 0) return res.status(400).json({ error: 'No hay rangos para guardar' });
 
-    // Obtener códigos de rangos a mantener
     const codigosNuevos = ranks.filter(r => r.code).map(r => r.code);
-    
-    // ✅ 1. Quitar grado a pilotos cuyo rango va a desaparecer
-    if (codigosNuevos.length > 0) {
-      await pool.query(
-        "UPDATE pilotos SET grado_code = NULL WHERE grado_code NOT IN (SELECT unnest($1::text[]))",
-        [codigosNuevos]
-      );
-    }
 
-    // ✅ 2. Eliminar TODOS los rangos viejos
-    await pool.query("DELETE FROM rangos");
+    // 1. Quitar el grado a pilotos cuyo rango será eliminado
+    await pool.query(
+      `UPDATE pilotos SET grado_code = NULL 
+       WHERE grado_code IS NOT NULL 
+       AND grado_code NOT IN (SELECT unnest($1::text[]))`,
+      [codigosNuevos]
+    );
 
-    // ✅ 3. Insertar los nuevos
+    // 2. Eliminar solo los rangos que ya no están en la nueva lista
+    await pool.query(
+      `DELETE FROM rangos WHERE code NOT IN (SELECT unnest($1::text[]))`,
+      [codigosNuevos]
+    );
+
+    // 3. Insertar o actualizar los rangos nuevos/existentes
     for (const rango of ranks) {
       if (!rango.code || !rango.name) continue;
       await pool.query(
-        `INSERT INTO rangos (code, nombre, orden, logo_url, discord_role_id) VALUES ($1, $2, $3, $4, $5)`,
+        `INSERT INTO rangos (code, nombre, orden, logo_url, discord_role_id)
+         VALUES ($1, $2, $3, $4, $5)
+         ON CONFLICT (code) DO UPDATE SET
+           nombre = EXCLUDED.nombre,
+           orden = EXCLUDED.orden,
+           logo_url = EXCLUDED.logo_url,
+           discord_role_id = EXCLUDED.discord_role_id`,
         [rango.code, rango.name, rango.orden || 999, rango.logo_url || null, rango.discord_role_id || null]
       );
     }
