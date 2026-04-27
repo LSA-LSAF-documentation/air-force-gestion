@@ -162,19 +162,24 @@ router.put('/rangos', verificarToken, esAdminOnly, async (req, res) => {
   try {
     const { ranks } = req.body;
     if (!ranks || !Array.isArray(ranks)) return res.status(400).json({ error: 'Datos inválidos' });
-    if (ranks.length === 0) return res.status(400).json({ error: 'No hay rangos para guardar' });
-
+    
+    // ✅ PRIMERO: Quitar grados de pilotos
+    await pool.query("UPDATE pilotos SET grado_code = NULL WHERE grado_code NOT IN (SELECT code FROM rangos WHERE code = ANY($1))", 
+      [ranks.filter(r => r.code).map(r => r.code)]);
+    
+    // ✅ LUEGO: Eliminar rangos viejos
     await pool.query("DELETE FROM rangos");
-
+    
+    // ✅ Insertar nuevos
     for (const rango of ranks) {
       if (!rango.code || !rango.name) continue;
       await pool.query(
-        `INSERT INTO rangos (code, nombre, orden, logo_url, discord_role_id) VALUES ($1, $2, $3, $4, $5)`,
+        `INSERT INTO rangos (code, nombre, orden, logo_url, discord_role_id) VALUES ($1, $2, $3, $4, $5)
+         ON CONFLICT (code) DO UPDATE SET nombre = $2, orden = $3, logo_url = $4, discord_role_id = $5`,
         [rango.code, rango.name, rango.orden || 999, rango.logo_url || null, rango.discord_role_id || null]
       );
     }
     
-    console.log('✅ Rangos guardados correctamente');
     res.json({ success: true, mensaje: 'Rangos actualizados' });
   } catch (error) {
     console.error('Error al guardar rangos:', error);
