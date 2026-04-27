@@ -1458,12 +1458,10 @@ async function degradarPiloto(id) {
         // CRUD RANGOS
         // ============================================
         
-        async function cargarRangosAdmin() {
-    // No cargar desde el servidor, usar rangosEditables directamente
+    async function cargarRangosAdmin() {
     const tbody = document.querySelector('#tablaRangos tbody');
     
     if (!rangosEditables || rangosEditables.length === 0) {
-        // Solo cargar desde servidor si está vacío
         const token = localStorage.getItem('token');
         const res = await fetch('/api/admin/rangos', {
             headers: { 'Authorization': `Bearer ${token}` }
@@ -1491,8 +1489,20 @@ async function degradarPiloto(id) {
             </tr>
         `;
     }).join('');
-}
-        
+    
+    // ✅ AGREGAR ESTO: Sincronizar inputs con rangosEditables en tiempo real
+    document.querySelectorAll('.rango-code, .rango-name, .rango-order, .rango-discord-role').forEach(input => {
+        input.addEventListener('input', function() {
+            const index = parseInt(this.dataset.index);
+            if (rangosEditables[index]) {
+                if (this.classList.contains('rango-code')) rangosEditables[index].code = this.value;
+                else if (this.classList.contains('rango-name')) rangosEditables[index].nombre = this.value;
+                else if (this.classList.contains('rango-order')) rangosEditables[index].orden = parseInt(this.value) || 999;
+                else if (this.classList.contains('rango-discord-role')) rangosEditables[index].discord_role_id = this.value;
+            }
+        });
+    });
+}     
         async function subirLogoRango(rangoId, index) {
     console.log('Subiendo logo para rango ID:', rangoId);
     
@@ -1566,14 +1576,36 @@ async function degradarPiloto(id) {
     
     const nuevosRangos = [];
     for (let i = 0; i < codes.length; i++) {
+        const rangoOriginal = rangosEditables[i] || {};
         nuevosRangos.push({
             code: codes[i].value,
             name: names[i].value,
-            orden: parseInt(orders[i].value),
-            logo_url: rangosEditables[i]?.logo_url || null,
+            orden: parseInt(orders[i].value) || 999,
+            logo_url: rangoOriginal.logo_url || null,
             discord_role_id: discordRoles[i]?.value || null
         });
     }
+    
+    console.log('📤 Enviando rangos:', nuevosRangos);
+    
+    const token = localStorage.getItem('token');
+    const response = await fetch('/api/admin/rangos', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ ranks: nuevosRangos })
+    });
+    
+    const result = await response.json();
+    console.log('📦 Respuesta:', result);
+    
+    if (response.ok) {
+        mostrarAlerta('✅ Rangos guardados', 'success');
+        rangosEditables = nuevosRangos;
+        cargarRangosAdmin();
+    } else {
+        mostrarAlerta('❌ Error: ' + (result.error || 'No se pudieron guardar'), 'error');
+    }
+}
     
     const token = localStorage.getItem('token');
     const response = await fetch('/api/admin/rangos', {
@@ -1594,7 +1626,7 @@ async function degradarPiloto(id) {
         // Recargar rangos desde el servidor para restaurar
         await cargarRangosAdmin();
     }
-}
+
         
         // ============================================
         // ESTADÍSTICAS
