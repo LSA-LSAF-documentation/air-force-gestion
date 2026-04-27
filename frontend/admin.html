@@ -707,1363 +707,881 @@
 </div>
 <script src="js/config.js"></script>
 
-    <script>
-        const API_BASE_URL = 'https://air-force-gestion.onrender.com';
-        let pilotoActual = null;
-        let pilotoIdSeleccionado = null;
-        let listaRangos = [];
-        let rangosEditables = [];
-        
+    <script src="js/config.js"></script>
 
-        // Mostrar alerta personalizada
-function mostrarAlerta(mensaje, tipo = 'info') {
-    const modal = document.getElementById('modalAlerta');
-    const titulo = document.getElementById('alertaTitulo');
-    const mensajeEl = document.getElementById('alertaMensaje');
-    const btn = document.getElementById('btnCerrarAlerta');
-    
-    if (tipo === 'success') {
-        titulo.innerHTML = '<i class="fas fa-check-circle"></i> Éxito';
-        btn.style.background = '#28a745';
-    } else if (tipo === 'error') {
-        titulo.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Error';
-        btn.style.background = '#dc3545';
-    } else if (tipo === 'warning') {
-        titulo.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Advertencia';
-        btn.style.background = '#ffc107';
-        btn.style.color = '#333';
-    } else {
-        titulo.innerHTML = '<i class="fas fa-info-circle"></i> Aviso';
-        btn.style.background = 'var(--af-sky)';
-        btn.style.color = 'white';
-    }
-    
-    mensajeEl.textContent = mensaje;
-    modal.style.display = 'flex';
-    
-    // Cerrar al hacer clic en el botón
-    btn.onclick = function() {
-        modal.style.display = 'none';
-    };
-    
-    // No cerrar al hacer clic fuera
-    modal.onclick = function(event) {
-        if (event.target === modal) return;
-    };
-}
-        
-        // ============================================
-        // VERIFICAR ADMIN
-        // ============================================
-        
-        // Mostrar modal de sesión expirada (no se puede cerrar)
-function mostrarModalSesionExpirada() {
-    const modal = document.getElementById('modalSesionExpirada');
-    if (modal) {
-        modal.style.display = 'flex';
-        modal.onclick = function(event) {
-            if (event.target === modal) return;
-        };
-        const btnCerrar = document.getElementById('btnCerrarSesionForzada');
-        if (btnCerrar) {
-            btnCerrar.onclick = function() {
-                localStorage.clear();
-                window.location.href = 'index.html';
-            };
-        }
-    } else {
-mostrarAlerta('Tu rol ha cambiado. Debes volver a iniciar sesión.', 'warning');        localStorage.clear();
-        window.location.href = 'index.html';
-    }
-}
+<script>
+    const API_BASE_URL = 'https://air-force-gestion.onrender.com';
+    let pilotoActual = null;
+    let pilotoIdSeleccionado = null;
+    let listaRangos = [];
+    let rangosEditables = [];
 
-// Verificar rol periódicamente
-async function verificarRolPeriodicamente() {
-    const token = localStorage.getItem('token');
-    const piloto = localStorage.getItem('piloto');
-    if (!token || !piloto) return;
-    
-    const pilotoData = JSON.parse(piloto);
-    
-    // Si es Admin, no verificar (para evitar problemas)
-    if (pilotoData.rol === 'Admin') {
-        return;
-    }
-    
-    try {
-        const response = await fetch(`/api/pilotos/${pilotoData.id}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        
-        if (response.ok) {
-            const data = await response.json();
-            const rolEnBD = data.piloto?.rol;
-            const activoEnBD = data.piloto?.activo;
-            
-            // Verificar si fue archivado
-            if (activoEnBD === 0) {
-                console.log('⚠️ Usuario archivado! Mostrando modal...');
-                mostrarModalSesionExpirada('Su cuenta ha sido desactivada. Ya no pertenece a la Fuerza Aérea de LSAF.');
-                return;
-            }
-            
-            // Verificar cambio de rol
-            if (rolEnBD && rolEnBD !== pilotoData.rol) {
-                console.log('⚠️ Rol cambiado! Mostrando modal...');
-                mostrarModalSesionExpirada('Su rol ha sido modificado. Debe volver a iniciar sesión.');
-            }
-        }
-    } catch (error) {
-        console.error('Error al verificar:', error);
-    }
-}
-
-// Verificar rol al cargar la página
-async function verificarRolAlCargar(token, pilotoId, rolActual) {
-    try {
-        const response = await fetch(`/api/pilotos/${pilotoId}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        
-        if (response.ok) {
-            const data = await response.json();
-            const rolEnBD = data.piloto.rol;
-            
-            console.log('Verificando rol al cargar - Local:', rolActual, 'BD:', rolEnBD);
-            
-            // Solo mostrar modal si los roles son diferentes
-            if (rolEnBD !== rolActual) {
-                console.log('⚠️ Rol cambiado! Mostrando modal...');
-                mostrarModalSesionExpirada();
-            } else {
-                console.log('✅ Rol coincide, acceso permitido');
-            }
-        }
-    } catch (error) {
-        console.error('Error al verificar rol:', error);
-    }
-}
-
-   function verificarAcceso() {
-    const token = localStorage.getItem('token');
-    const piloto = localStorage.getItem('piloto');
-    
-    if (!token || !piloto) {
-        window.location.href = 'index.html';
-        return false;
-    }
-    
-    pilotoActual = JSON.parse(piloto);
-    
-    // Verificar si es Admin o Supervisor
-    if (pilotoActual.rol !== 'Admin' && pilotoActual.rol !== 'Supervisor') {
-        window.location.href = 'pilotos.html';
-        return false;
-    }
-    
-    document.getElementById('profileName').textContent = pilotoActual.nombre;
-    document.getElementById('profileRank').textContent = pilotoActual.grado;
-    
-    const iniciales = pilotoActual.nombre.split(' ').map(n => n[0]).join('');
-    const avatarImg = document.getElementById('avatarImg');
-    const avatarTexto = document.getElementById('avatarTexto');
-    
-    if (pilotoActual.foto_url && pilotoActual.foto_url !== '') {
-        let fotoUrl = pilotoActual.foto_url;
-        if (!fotoUrl.startsWith('http')) {
-            fotoUrl = `${API_BASE_URL}${fotoUrl}`;
-        }
-        avatarImg.style.display = 'block';
-        avatarTexto.style.display = 'none';
-        avatarImg.src = fotoUrl;
-    } else {
-        avatarImg.style.display = 'none';
-        avatarTexto.style.display = 'block';
-        avatarTexto.textContent = iniciales.substring(0, 2);
-    }
-    
-    // Ocultar pestañas según el rol
-    if (pilotoActual.rol === 'Supervisor') {
-        const tabAeronaves = document.querySelector('.tab-btn[onclick="showTab(\'aeronaves\')"]');
-        const tabRangos = document.querySelector('.tab-btn[onclick="showTab(\'rangos\')"]');
-        if (tabAeronaves) tabAeronaves.style.display = 'none';
-        if (tabRangos) tabRangos.style.display = 'none';
-    }
-    
     // ============================================
-    // CONFIGURACIÓN DE LOGOS Y TÍTULOS DE LA ORGANIZACIÓN
+    // ALERTA PERSONALIZADA
     // ============================================
-    
-    // Configurar logos de la sidebar
-    if (document.getElementById('sidebarLogo')) {
-        document.getElementById('sidebarLogo').src = ORG_CONFIG.logos.principal;
-        document.getElementById('sidebarNombre').textContent = ORG_CONFIG.nombre;
-        document.getElementById('sidebarSubtitulo').textContent = ORG_CONFIG.textos.sistema;
-        document.getElementById('logo1').src = ORG_CONFIG.logos.secundario1;
-        document.getElementById('logo2').src = ORG_CONFIG.logos.secundario2;
-    }
-    
-    // Configurar título de la página
-    document.title = `Admin Panel - ${ORG_CONFIG.nombre}`;
-    
-    // Activar la pestaña de pilotos manualmente
-    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-    document.getElementById('tab-pilotos').classList.add('active');
-    
-    return true;
-}
+    function mostrarAlerta(mensaje, tipo = 'info') {
+        const modal = document.getElementById('modalAlerta');
+        const titulo = document.getElementById('alertaTitulo');
+        const mensajeEl = document.getElementById('alertaMensaje');
+        const btn = document.getElementById('btnCerrarAlerta');
         
-        // ============================================
-        // GENERAR ID
-        // ============================================
-        
-        function generarID() {
-            const numero = Math.floor(Math.random() * 9000) + 1000;
-            return `AF${numero}`;
-        }
-        
-        // ============================================
-        // CARGAR RANGOS
-        // ============================================
-        
-        async function cargarRangos() {
-    const token = localStorage.getItem('token');
-    try {
-        // Usar el endpoint público que funciona para Admin y Supervisor
-        const response = await fetch('/api/admin/rangos-public', {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const data = await response.json();
-        listaRangos = data.ranks || [];
-        return listaRangos;
-    } catch (error) {
-        console.error('Error al cargar rangos:', error);
-        return [];
-    }
-}
-        
-        async function cargarRangosSelect() {
-            const rangos = await cargarRangos();
-            const select = document.getElementById('piloto_grado');
-            if (select && rangos.length > 0) {
-                select.innerHTML = '<option value="">Selecciona un rango</option>';
-                rangos.forEach(rango => {
-                    select.innerHTML += `<option value="${rango.code}">${rango.code} - ${rango.nombre}</option>`;
-                });
-            }
-        }
-        
-        // ============================================
-        // SUBIR IMAGEN
-        // ============================================
-        
-        async function subirImagen(endpoint, file, id, previewElement, progressElement, inputUrlElement) {
-            const formData = new FormData();
-            formData.append('imagen', file);
-            const token = localStorage.getItem('token');
-            
-            return new Promise((resolve, reject) => {
-                const xhr = new XMLHttpRequest();
-                xhr.open('POST', `/api/admin/upload/${endpoint}/${id}`, true);
-                xhr.setRequestHeader('Authorization', `Bearer ${token}`);
-                
-                xhr.upload.onprogress = function(e) {
-                    if (e.lengthComputable && progressElement) {
-                        progressElement.value = (e.loaded / e.total) * 100;
-                    }
-                };
-                
-                xhr.onload = function() {
-                    if (xhr.status === 200) {
-                        const response = JSON.parse(xhr.responseText);
-                        if (inputUrlElement) inputUrlElement.value = response.url;
-                        if (previewElement) {
-                            previewElement.style.display = 'block';
-                            const img = previewElement.querySelector('img');
-                            if (img) img.src = response.url;
-                        }
-                        resolve(response);
-                    } else {
-                        reject(new Error('Error al subir imagen'));
-                    }
-                };
-                
-                xhr.onerror = () => reject(new Error('Error de conexión'));
-                xhr.send(formData);
-            });
-        }
-        
-        // ============================================
-// CRUD PILOTOS
-// ============================================
-
-async function cargarPilotos() {
-    const token = localStorage.getItem('token');
-    const incluirInactivos = document.getElementById('incluirInactivos')?.checked || false;
-    const tbody = document.querySelector('#tablaPilotos tbody');
-    const esAdmin = pilotoActual.rol === 'Admin';
-    const esSupervisor = pilotoActual.rol === 'Supervisor';
-    
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">Cargando...';
-    
-    try {
-        const res = await fetch(`/api/admin/pilotos?incluirInactivos=${incluirInactivos}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        
-        if (!res.ok) {
-            tbody.innerHTML = '</table><td colspan="6" style="text-align: center; color:red;">Error de permisos</tbody>';
-            return;
-        }
-        
-        const data = await res.json();
-        
-        if (!data.pilotos || data.pilotos.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">No hay pilotos registrados</tbody>';
-            return;
-        }
-        
-        tbody.innerHTML = data.pilotos.map(p => {
-            const estaActivo = p.activo !== 0;
-            const esAdminObjetivo = p.rol === 'Admin';
-            
-            const estadoBadge = estaActivo 
-                ? '<span class="badge-rol" style="background: #28a745;">✅ Activo</span>'
-                : '<span class="badge-rol" style="background: #dc3545;">📦 Archivado</span>';
-            
-            // Columna de rol (solo Admin puede cambiarlo)
-            let rolColumn = '';
-            if (esAdmin) {
-                const rolIcono = p.rol === 'Admin' ? '👑' : (p.rol === 'Supervisor' ? '👁️' : (p.rol === 'Instructor' ? '📚' : '👨‍✈️'));
-                rolColumn = `
-                    <select class="rol-select" onchange="cambiarRol('${p.id}', this.value)">
-                        <option value="Piloto" ${p.rol === 'Piloto' ? 'selected' : ''}>${rolIcono} Piloto</option>
-                        <option value="Instructor" ${p.rol === 'Instructor' ? 'selected' : ''}>📚 Instructor</option>
-                        <option value="Supervisor" ${p.rol === 'Supervisor' ? 'selected' : ''}>👁️ Supervisor</option>
-                        <option value="Admin" ${p.rol === 'Admin' ? 'selected' : ''}>👑 Admin</option>
-                    </select>
-                `;
-            } else {
-                const rolIcono = p.rol === 'Admin' ? '👑' : (p.rol === 'Supervisor' ? '👁️' : (p.rol === 'Instructor' ? '📚' : '👨‍✈️'));
-                rolColumn = `<span class="badge-rol" style="background: var(--af-sky);">${rolIcono} ${p.rol}</span>`;
-            }
-            
-            // Botones - Supervisor NO puede modificar Admins
-            // Botón editar (Admin puede editar a todos, incluyéndose a sí mismo)
-const editarBtn = (esAdmin || (esSupervisor && !esAdminObjetivo)) 
-    ? `<button class="btn-small btn-primary-small" onclick="editarPiloto('${p.id}')"><i class="fas fa-edit"></i></button>`
-    : '';
-
-// Botón cambiar contraseña (Admin puede cambiar a todos, incluyéndose a sí mismo)
-const passwordBtn = (esAdmin || (esSupervisor && !esAdminObjetivo)) 
-    ? `<button class="btn-small btn-primary-small" onclick="abrirModalPassword('${p.id}')"><i class="fas fa-key"></i></button>`
-    : '';
-            
-            // Botón ascender (Admin puede ascender a todos, Supervisor no puede ascender a Admins)
-const ascenderBtn = (esAdmin || (esSupervisor && !esAdminObjetivo)) 
-    ? `<button class="btn-small btn-success-small" onclick="ascenderPiloto('${p.id}')"><i class="fas fa-arrow-up"></i></button>`
-    : '';
-
-// Botón degradar (Admin puede degradar a todos, Supervisor no puede degradar a Admins)
-const degradarBtn = (esAdmin || (esSupervisor && !esAdminObjetivo)) 
-    ? `<button class="btn-small btn-warning-small" onclick="degradarPiloto('${p.id}')"><i class="fas fa-arrow-down"></i></button>`
-    : '';
-
-// Botón archivar/activar (Admin puede archivar a todos, Supervisor no puede archivar a Admins)
-const archivarBtn = ((esAdmin || (esSupervisor && !esAdminObjetivo)) && estaActivo) 
-    ? `<button class="btn-small btn-warning-small" onclick="archivarPiloto('${p.id}')"><i class="fas fa-archive"></i></button>`
-    : ((esAdmin || (esSupervisor && !esAdminObjetivo)) && !estaActivo) 
-        ? `<button class="btn-small btn-success-small" onclick="activarPiloto('${p.id}')"><i class="fas fa-trash-restore"></i></button>`
-        : '';
-            
-            // Botón eliminar (solo Admin, y no puede eliminarse a sí mismo)
-            const eliminarBtn = esAdmin && p.id !== pilotoActual.id 
-                ? `<button class="btn-small btn-danger-small" onclick="eliminarPiloto('${p.id}')"><i class="fas fa-trash"></i></button>`
-                : '';
-            
-            return `
-                <tr>
-                    <td>${p.id}${!estaActivo ? ' <span style="color:red;">(Archivado)</span>' : ''}</td>
-                    <td>${p.nombre_completo}${!estaActivo ? ' <span style="color:red;">(Archivado)</span>' : ''}</td>
-                    <td>${p.grado_nombre || p.grado_code}</td>
-                    <td>${p.email}</td>
-                    <td>
-                        ${estadoBadge}<br>
-                        ${rolColumn}
-                     </td>
-                    <td>
-                        ${editarBtn}
-                        ${passwordBtn}
-                        ${ascenderBtn}
-                        ${degradarBtn}
-                        ${archivarBtn}
-                        ${eliminarBtn}
-                     </td>
-                </tr>
-            `;
-        }).join('');
-    } catch (error) {
-        console.error('Error:', error);
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color:red;">Error al cargar</tbody>';
-    }
-}
-        
-    async function cambiarRol(id, nuevoRol) {
-    const token = localStorage.getItem('token');
-    const pilotoActualLogueado = JSON.parse(localStorage.getItem('piloto'));
-    
-    // Si es el mismo usuario (Admin cambiándose a sí mismo)
-    const esMismoUsuario = pilotoActualLogueado.id === id;
-    
-    try {
-        const res = await fetch(`/api/admin/pilotos/${id}/rol`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify({ rol: nuevoRol })
-        });
-        
-        if (res.ok) {
-mostrarAlerta(`Rol actualizado a ${nuevoRol}`, 'success');            
-            if (esMismoUsuario) {
-                // El Admin se cambió a sí mismo - mostrar modal
-                mostrarModalSesionExpirada();
-            } else {
-                // Es otro usuario, solo recargar la tabla
-                cargarPilotos();
-            }
+        if (tipo === 'success') {
+            titulo.innerHTML = '<i class="fas fa-check-circle"></i> Éxito';
+            btn.style.background = '#28a745';
+        } else if (tipo === 'error') {
+            titulo.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Error';
+            btn.style.background = '#dc3545';
+        } else if (tipo === 'warning') {
+            titulo.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Advertencia';
+            btn.style.background = '#ffc107';
+            btn.style.color = '#333';
         } else {
-            const error = await res.json();
-            mostrarAlerta(error.error || 'No se pudo actualizar el rol', 'error');
+            titulo.innerHTML = '<i class="fas fa-info-circle"></i> Aviso';
+            btn.style.background = 'var(--af-sky)';
+            btn.style.color = 'white';
         }
-    } catch (error) {
-        console.error('Error:', error);
-        mostrarAlerta('Error al cambiar el rol', 'error');
-    }
-}
-
-// Agregar la función mostrarModalSesionExpirada también en admin.html
-function mostrarModalSesionExpirada(mensajePersonalizado = null) {
-    const modal = document.getElementById('modalSesionExpirada');
-    const mensajeEl = document.querySelector('#modalSesionExpirada p:first-of-type');
-    
-    if (modal) {
-        if (mensajePersonalizado) {
-            mensajeEl.textContent = mensajePersonalizado;
-        } else {
-            mensajeEl.textContent = 'Tu rol ha sido modificado por un administrador.';
-        }
+        
+        mensajeEl.textContent = mensaje;
         modal.style.display = 'flex';
-        modal.onclick = function(event) {
-            if (event.target === modal) return;
-        };
-        const btnCerrar = document.getElementById('btnCerrarSesionForzada');
-        if (btnCerrar) {
-            btnCerrar.onclick = function() {
-                localStorage.clear();
-                window.location.href = 'index.html';
-            };
-        }
-    } else {
-        alert(mensajePersonalizado || 'Tu rol ha cambiado. Debes volver a iniciar sesión.');
-        localStorage.clear();
-        window.location.href = 'index.html';
+        btn.onclick = function() { modal.style.display = 'none'; };
+        modal.onclick = function(event) { if (event.target === modal) return; };
     }
-}
-        
-      async function editarPiloto(id) {
-    const token = localStorage.getItem('token');
-    
-    // Verificar permisos
-    if (pilotoActual.rol !== 'Admin' && pilotoActual.rol !== 'Supervisor') {
-        mostrarAlerta('No tienes permiso para editar pilotos', 'error');
-        return;
-    }
-    
-    try {
-        const response = await fetch(`/api/admin/pilotos/${id}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        
-        if (!response.ok) {
-            mostrarAlerta('No se pudo cargar el piloto', 'error');
-            return;
-        }
-        
-        const data = await response.json();
-        const p = data.piloto;
-        
-        document.getElementById('edit_piloto_id').value = p.id;
-        document.getElementById('edit_piloto_nombre').value = p.nombre_completo;
-        document.getElementById('edit_piloto_email').value = p.email;
-        document.getElementById('edit_piloto_discord_id').value = p.discord_id || '';
-        document.getElementById('edit_piloto_foto').value = p.foto_url || '';
-        
-        document.getElementById('modalEditarPiloto').style.display = 'flex';
-    } catch (error) {
-        console.error('Error:', error);
-        mostrarAlerta('Error al cargar el piloto', 'error');
-    }
-}
 
-        
-        async function ascenderPiloto(id) {
-    if (pilotoActual.rol !== 'Admin' && pilotoActual.rol !== 'Supervisor') {
-        mostrarAlerta('No tienes permiso para ascender pilotos', 'error');
-        return;
-    }
-    
-    const motivo = prompt('Motivo del ascenso:');
-    const token = localStorage.getItem('token');
-    
-    try {
-        const res = await fetch(`/api/admin/pilotos/${id}/cambiar-grado`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify({ tipo: 'ascenso', motivo: motivo || null })
-        });
-        
-        const result = await res.json();
-        
-        if (res.ok) {
-            mostrarAlerta(result.mensaje, 'success');
-            cargarPilotos();
-        } else {
-            mostrarAlerta('❌ Error: ' + result.error, 'error');
-        }
-    } catch (error) {
-        mostrarAlerta('❌ Error al ascender', 'error');
-    }
-}
-
-async function degradarPiloto(id) {
-    if (pilotoActual.rol !== 'Admin' && pilotoActual.rol !== 'Supervisor') {
-        mostrarAlerta('No tienes permiso para degradar pilotos', 'error');
-        return;
-    }
-    
-    const motivo = prompt('Motivo del descenso:');
-    const token = localStorage.getItem('token');
-    
-    try {
-        const res = await fetch(`/api/admin/pilotos/${id}/cambiar-grado`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify({ tipo: 'descenso', motivo: motivo || null })
-        });
-        
-        const result = await res.json();
-        
-        if (res.ok) {
-            mostrarAlerta(result.mensaje, 'success');
-            cargarPilotos();
-        } else {
-            mostrarAlerta('❌ Error: ' + result.error, 'error');
-        }
-    } catch (error) {
-        mostrarAlerta('❌ Error al degradar', 'error');
-    }
-}
-        
-        async function archivarPiloto(id) {
-    if (pilotoActual.rol !== 'Admin' && pilotoActual.rol !== 'Supervisor') {
-        mostrarAlerta('No tienes permiso para archivar pilotos', 'error');
-        return;
-    }
-    
-    if (!confirm('¿Archivar este piloto? Sus datos se conservarán pero no podrá iniciar sesión.')) return;
-    
-    const token = localStorage.getItem('token');
-    const pilotoActualLogueado = JSON.parse(localStorage.getItem('piloto'));
-    const esMismoUsuario = pilotoActualLogueado.id === id;
-    
-    try {
-        const res = await fetch(`/api/admin/pilotos/${id}/archivar`, {
-            method: 'PUT',
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        
-        if (res.ok) {
-            if (esMismoUsuario) {
-                mostrarAlerta('Has archivado tu propia cuenta. La sesión se cerrará.', 'warning');
-                setTimeout(() => {
+    // ============================================
+    // SESIÓN EXPIRADA
+    // ============================================
+    function mostrarModalSesionExpirada(mensajePersonalizado = null) {
+        const modal = document.getElementById('modalSesionExpirada');
+        const mensajeEl = document.querySelector('#modalSesionExpirada p:first-of-type');
+        if (modal) {
+            if (mensajePersonalizado && mensajeEl) mensajeEl.textContent = mensajePersonalizado;
+            modal.style.display = 'flex';
+            modal.onclick = function(event) { if (event.target === modal) return; };
+            const btnCerrar = document.getElementById('btnCerrarSesionForzada');
+            if (btnCerrar) {
+                btnCerrar.onclick = function() {
                     localStorage.clear();
                     window.location.href = 'index.html';
-                }, 2000);
-            } else {
-                mostrarAlerta('✅ Piloto archivado', 'success');
-                cargarPilotos();
-                cargarStats();
+                };
             }
         } else {
-            mostrarAlerta('❌ Error al archivar', 'error');
+            alert(mensajePersonalizado || 'Tu rol ha cambiado. Debes volver a iniciar sesión.');
+            localStorage.clear();
+            window.location.href = 'index.html';
         }
-    } catch (error) {
-        console.error('Error:', error);
-        mostrarAlerta('❌ Error al archivar', 'error');
-    }
-}
-
-        
-        async function activarPiloto(id) {
-    if (pilotoActual.rol !== 'Admin' && pilotoActual.rol !== 'Supervisor') {
-        mostrarAlerta('No tienes permiso para activar pilotos', 'error');
-        return;
-    }
-    
-    if (!confirm('¿Activar este piloto? Volverá a aparecer en las listas.')) return;
-    
-    const token = localStorage.getItem('token');
-    
-    try {
-        const res = await fetch(`/api/admin/pilotos/${id}/activar`, {
-            method: 'PUT',
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        
-        if (res.ok) {
-            mostrarAlerta('✅ Piloto activado', 'success');
-            cargarPilotos();
-            cargarStats();
-        } else {
-            mostrarAlerta('❌ Error al activar', 'error');
-        }
-    } catch (error) {
-        console.error('Error:', error);
-        mostrarAlerta('❌ Error al activar', 'error');
-    }
-}
-        
-        async function eliminarPiloto(id) {
-            if (!confirm('¿Eliminar este piloto permanentemente?')) return;
-            const token = localStorage.getItem('token');
-            const res = await fetch(`/api/admin/pilotos/${id}`, {
-                method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (res.ok) {
-                mostrarAlerta('Piloto eliminado', 'success');
-                cargarPilotos();
-                cargarStats();
-            } else {
-                mostrarAlerta('Error al eliminar', 'error');
-            }
-        }
-        
-        // ============================================
-        // CRUD AERONAVES
-        // ============================================
-        
-        async function cargarAeronaves() {
-            const token = localStorage.getItem('token');
-            const tbody = document.querySelector('#tablaAeronaves tbody');
-            tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">Cargando...</tbody>';
-            
-            try {
-                const res = await fetch('/api/admin/aeronaves', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                const data = await res.json();
-                
-                if (!data.aeronaves || data.aeronaves.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">No hay aeronaves registradas</tbody>';
-                    return;
-                }
-                
-                tbody.innerHTML = data.aeronaves.map(a => `
-                    <tr>
-                        <td>${a.id}</td>
-                        <td>${a.modelo}</td>
-                        <td>${a.nivel || 'Básico'}</td>
-                        <td>${a.tipo || 'Ala fija'}</td>
-                        <td>${a.estado}</td>
-                        <td>
-                            <button class="btn-small btn-primary-small" onclick="editarAeronave('${a.id}')"><i class="fas fa-edit"></i></button>
-                            <button class="btn-small btn-danger-small" onclick="eliminarAeronave('${a.id}')"><i class="fas fa-trash"></i></button>
-                        </td>
-                    </tr>
-                `).join('');
-            } catch (error) {
-                console.error('Error:', error);
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color:red;">Error al cargar</tbody>';
-            }
-        }
-        
-        async function editarAeronave(id) {
-    console.log('📝 Editando aeronave ID:', id);
-    const token = localStorage.getItem('token');
-    
-    try {
-        const response = await fetch(`/api/admin/aeronaves/${encodeURIComponent(id)}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        
-        if (!response.ok) {
-            const error = await response.json();
-            mostrarAlerta(error.error || 'No se pudo cargar la aeronave', 'error');
-            return;
-        }
-        
-        const data = await response.json();
-        
-        if (!data.aeronave) {
-            mostrarAlerta('Aeronave no encontrada', 'error');
-            return;
-        }
-        
-        const a = data.aeronave;  // ✅ Se define UNA SOLA VEZ, después del if
-        
-        document.getElementById('edit_aeronave_id').value = a.id;
-        document.getElementById('edit_aeronave_modelo').value = a.modelo;
-        document.getElementById('edit_aeronave_nivel').value = a.nivel || 'Básico';
-        document.getElementById('edit_aeronave_tipo').value = a.tipo || 'Ala fija';
-        document.getElementById('edit_aeronave_estado').value = a.estado;
-        document.getElementById('edit_aeronave_imagen').value = a.imagen_url || '';
-        
-        console.log('📝 ID guardado en hidden:', a.id);
-        
-        document.getElementById('modalEditarAeronave').style.display = 'flex';
-    } catch (error) {
-        console.error('Error:', error);
-        mostrarAlerta('Error al cargar la aeronave', 'error');
-    }
-}
-        
-        async function eliminarAeronave(id) {
-            if (!confirm('¿Estás seguro de eliminar esta aeronave?')) return;
-            
-            const token = localStorage.getItem('token');
-            
-            try {
-                const response = await fetch(`/api/admin/aeronaves/${encodeURIComponent(id)}`, {
-                    method: 'DELETE',
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                
-                const result = await response.json();
-                
-                if (response.ok) {
-                    mostrarAlerta('Aeronave eliminada', 'success');
-                    cargarAeronaves();
-                    cargarStats();
-                } else {
-                    mostrarAlerta(result.error || 'No se pudo eliminar', 'error');
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                mostrarAlerta('Error al eliminar', 'error');
-            }
-        }
-        
-        // ============================================
-        // CRUD RANGOS
-        // ============================================
-        
-    async function cargarRangosAdmin() {
-    const tbody = document.querySelector('#tablaRangos tbody');
-    
-    if (!rangosEditables || rangosEditables.length === 0) {
-        const token = localStorage.getItem('token');
-        const res = await fetch('/api/admin/rangos', {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const data = await res.json();
-        rangosEditables = data.ranks || [];
-    }
-    
-    tbody.innerHTML = rangosEditables.map((r, index) => {
-        const logoUrl = r.logo_url ? `${API_BASE_URL}${r.logo_url}` : null;
-        const logoHtml = logoUrl 
-            ? `<img src="${logoUrl}" class="rango-logo-tabla" onerror="this.style.display='none';">`
-            : `<div style="width: 40px; height: 40px; background: var(--af-gray); border-radius: 5px; display: flex; align-items: center; justify-content: center;"><i class="fas fa-image"></i></div>`;
-        
-        return `
-            <tr>
-                <td>${logoHtml}<br>
-                    <button class="btn-small btn-primary-small" onclick="subirLogoRango(${r.id}, ${index})">Subir Logo</button>
-                </td>
-                <td><input type="text" class="rango-code" value="${r.code}" data-index="${index}" style="width:100px"></td>
-                <td><input type="text" class="rango-name" value="${r.nombre}" data-index="${index}" style="width:200px"></td>
-                <td><input type="number" class="rango-order" value="${r.orden}" data-index="${index}" style="width:80px"></td>
-                <td><input type="text" class="rango-discord-role" value="${r.discord_role_id || ''}" data-index="${index}" style="width:150px" placeholder="ID del rol"></td>
-                <td><button class="btn-small btn-danger-small" onclick="eliminarRangoFila(${index})">Eliminar</button></td>
-            </tr>
-        `;
-    }).join('');
-    
-    // ✅ AGREGAR ESTO: Sincronizar inputs con rangosEditables en tiempo real
-    document.querySelectorAll('.rango-code, .rango-name, .rango-order, .rango-discord-role').forEach(input => {
-        input.addEventListener('input', function() {
-            const index = parseInt(this.dataset.index);
-            if (rangosEditables[index]) {
-                if (this.classList.contains('rango-code')) rangosEditables[index].code = this.value;
-                else if (this.classList.contains('rango-name')) rangosEditables[index].nombre = this.value;
-                else if (this.classList.contains('rango-order')) rangosEditables[index].orden = parseInt(this.value) || 999;
-                else if (this.classList.contains('rango-discord-role')) rangosEditables[index].discord_role_id = this.value;
-            }
-        });
-    });
-}     
-        async function subirLogoRango(rangoId, index) {
-    console.log('Subiendo logo para rango ID:', rangoId);
-    
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    input.onchange = async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        
-        const formData = new FormData();
-        formData.append('imagen', file);
-        const token = localStorage.getItem('token');
-        
-        try {
-            const response = await fetch(`/api/admin/upload/rango/${rangoId}`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                },
-                body: formData
-            });
-            
-            const result = await response.json();
-            console.log('Respuesta:', result);
-            
-            if (response.ok) {
-                mostrarAlerta('Logo subido correctamente', 'success')
-                cargarRangosAdmin();
-            } else {
-                mostrarAlerta(result.error || 'Error desconocido al subir logo', 'error');
-            }
-        } catch (error) {
-            console.error('Error:', error);
-            mostrarAlerta('Error de conexión', 'error');
-        }
-    };
-    input.click();
-}
-        
-        function agregarRango() {
-    console.log('1. Función agregarRango ejecutada');
-    
-    if (!rangosEditables) {
-        console.log('2. rangosEditables no existe, creándolo');
-        rangosEditables = [];
-    }
-    
-    console.log('3. rangosEditables actual:', rangosEditables);
-    
-    const newIndex = rangosEditables.length;
-    console.log('4. Nuevo índice:', newIndex);
-    
-    rangosEditables.push({ code: 'NEW', nombre: 'Nuevo Rango', orden: newIndex + 1 });
-    console.log('5. rangosEditables después:', rangosEditables);
-    
-    console.log('6. Llamando a cargarRangosAdmin...');
-    cargarRangosAdmin();
-}
-        
-        function eliminarRangoFila(index) {
-            rangosEditables.splice(index, 1);
-            cargarRangosAdmin();
-        }
-        
-        async function guardarRangos() {
-    const codes = document.querySelectorAll('.rango-code');
-    const names = document.querySelectorAll('.rango-name');
-    const orders = document.querySelectorAll('.rango-order');
-    const discordRoles = document.querySelectorAll('.rango-discord-role');
-    
-    const nuevosRangos = [];
-    for (let i = 0; i < codes.length; i++) {
-        const rangoOriginal = rangosEditables[i] || {};
-        nuevosRangos.push({
-            code: codes[i].value,
-            name: names[i].value,
-            orden: parseInt(orders[i].value) || 999,
-            logo_url: rangoOriginal.logo_url || null,
-            discord_role_id: discordRoles[i]?.value || null
-        });
-    }
-    
-    console.log('📤 Enviando rangos:', nuevosRangos);
-    
-    const token = localStorage.getItem('token');
-    const response = await fetch('/api/admin/rangos', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ ranks: nuevosRangos })
-    });
-    
-    const result = await response.json();
-    console.log('📦 Respuesta:', result);
-    
-    if (response.ok) {
-        mostrarAlerta('✅ Rangos guardados', 'success');
-        rangosEditables = nuevosRangos;
-        cargarRangosAdmin();
-    } else {
-        mostrarAlerta('❌ Error: ' + (result.error || 'No se pudieron guardar'), 'error');
-    }
-}
-    
-    const token = localStorage.getItem('token');
-    const response = await fetch('/api/admin/rangos', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ ranks: nuevosRangos })
-    });
-    
-    const result = await response.json();
-    console.log('Respuesta:', result);
-    
-    if (response.ok) {
-        mostrarAlerta('✅ Rangos guardados', 'success');
-        rangosEditables = nuevosRangos;
-        cargarRangosAdmin();
-    } else {
-        mostrarAlerta('❌ Error: ' + (result.error || 'No se pudieron guardar'), 'error');
-        // Recargar rangos desde el servidor para restaurar
-        await cargarRangosAdmin();
     }
 
-        
-        // ============================================
-        // ESTADÍSTICAS
-        // ============================================
-        
-        async function cargarStats() {
-            const token = localStorage.getItem('token');
-            const res = await fetch('/api/admin/stats', { headers: { 'Authorization': `Bearer ${token}` } });
-            const data = await res.json();
-            document.getElementById('statsContainer').innerHTML = `
-                <div class="stat-card-admin"><div class="stat-number">${data.stats.totalPilotos}</div><div class="stat-label">Pilotos Activos</div></div>
-                <div class="stat-card-admin"><div class="stat-number">${data.stats.totalAeronaves}</div><div class="stat-label">Aeronaves</div></div>
-                <div class="stat-card-admin"><div class="stat-number">${data.stats.solicitudesPendientes}</div><div class="stat-label">Solicitudes Pendientes</div></div>
-                <div class="stat-card-admin"><div class="stat-number">${data.stats.totalVuelos || 0}</div><div class="stat-label">Vuelos Registrados</div></div>
-            `;
-        }
-        
-        // ============================================
-        // MODALES
-        // ============================================
-        
-        function abrirModalPiloto() {
-    document.getElementById('modalPiloto').style.display = 'flex';
-    document.getElementById('formPiloto').reset();
-    document.getElementById('fotoPreview').style.display = 'none';
-    document.getElementById('piloto_id').value = generarID();
-    cargarRangosSelect();
-    
-    // Si es Supervisor, ocultar la opción "Admin" en el select de roles
-    if (pilotoActual.rol === 'Supervisor') {
-        const selectRol = document.getElementById('piloto_rol');
-        if (selectRol) {
-            // Limpiar y recrear solo las opciones permitidas
-            selectRol.innerHTML = `
-                <option value="Piloto">👨‍✈️ Piloto</option>
-                <option value="Instructor">📚 Instructor</option>
-                <option value="Supervisor">👁️ Supervisor</option>
-            `;
-        }
-    } else if (pilotoActual.rol === 'Admin') {
-        // Admin ve todas las opciones
-        const selectRol = document.getElementById('piloto_rol');
-        if (selectRol) {
-            selectRol.innerHTML = `
-                <option value="Piloto">👨‍✈️ Piloto</option>
-                <option value="Instructor">📚 Instructor</option>
-                <option value="Supervisor">👁️ Supervisor</option>
-                <option value="Admin">👑 Admin</option>
-            `;
-        }
-    }
-}
-        
-        function cerrarModalPiloto() { document.getElementById('modalPiloto').style.display = 'none'; }
-        function cerrarModalEditarPiloto() { document.getElementById('modalEditarPiloto').style.display = 'none'; }
-        function abrirModalAeronave() { document.getElementById('modalAeronave').style.display = 'flex'; }
-        function cerrarModalAeronave() { document.getElementById('modalAeronave').style.display = 'none'; }
-        function cerrarModalEditarAeronave() { document.getElementById('modalEditarAeronave').style.display = 'none'; }
-        function abrirModalPassword(id) { pilotoIdSeleccionado = id; document.getElementById('modalPassword').style.display = 'flex'; }
-        function cerrarModalPassword() { document.getElementById('modalPassword').style.display = 'none'; }
-        
-        // ============================================
-        // SUBIR IMAGEN EN EDICIÓN
-        // ============================================
-        
-        const uploadAreaEditarPiloto = document.getElementById('uploadAreaEditarPiloto');
-        const fotoArchivoEditarPiloto = document.getElementById('fotoArchivoEditarPiloto');
-        
-        if (uploadAreaEditarPiloto) {
-            uploadAreaEditarPiloto.addEventListener('click', () => fotoArchivoEditarPiloto.click());
-            
-            fotoArchivoEditarPiloto.addEventListener('change', async function(e) {
-                const file = e.target.files[0];
-                if (!file) return;
-                const id = document.getElementById('edit_piloto_id').value;
-                if (!id) { mostrarAlerta('Primero guarda el piloto', 'warning'); return; }
-                
-                const preview = document.getElementById('uploadPreviewEditarPiloto');
-                const previewImg = document.getElementById('uploadPreviewImgEditarPiloto');
-                const progress = document.getElementById('uploadProgressEditarPiloto');
-                const urlInput = document.getElementById('edit_piloto_foto');
-                
-                const reader = new FileReader();
-                reader.onload = (e) => { previewImg.src = e.target.result; preview.style.display = 'block'; };
-                reader.readAsDataURL(file);
-                
-                try {
-                    await subirImagen('piloto', file, id, preview, progress, urlInput);
-                    mostrarAlerta('Imagen subida correctamente', 'success');
-                } catch (error) {
-                    mostrarAlerta(error.message || 'Error al subir imagen', 'error');
-                }
-            });
-        }
-        
-        const uploadAreaEditarAeronave = document.getElementById('uploadAreaEditarAeronave');
-        const fotoArchivoEditarAeronave = document.getElementById('fotoArchivoEditarAeronave');
-        
-        if (uploadAreaEditarAeronave) {
-            uploadAreaEditarAeronave.addEventListener('click', () => fotoArchivoEditarAeronave.click());
-            
-            fotoArchivoEditarAeronave.addEventListener('change', async function(e) {
-                const file = e.target.files[0];
-                if (!file) return;
-                const id = document.getElementById('edit_aeronave_id').value;
-                if (!id) { mostrarAlerta('Primero guarda la aeronave', 'warning'); return; }
-                
-                const preview = document.getElementById('uploadPreviewEditarAeronave');
-                const previewImg = document.getElementById('uploadPreviewImgEditarAeronave');
-                const progress = document.getElementById('uploadProgressEditarAeronave');
-                const urlInput = document.getElementById('edit_aeronave_imagen');
-                
-                const reader = new FileReader();
-                reader.onload = (e) => { previewImg.src = e.target.result; preview.style.display = 'block'; };
-                reader.readAsDataURL(file);
-                
-                try {
-                    await subirImagen('aeronave', file, id, preview, progress, urlInput);
-                    mostrarAlerta('Imagen subida correctamente', 'success');
-                } catch (error) {
-                    mostrarAlerta(error.message || 'Error al subir imagen', 'error');
-                }
-            });
-        }
-        
-        // ============================================
-        // ENVÍO DE FORMULARIOS
-        // ============================================
-        
-        document.getElementById('formPiloto').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const token = localStorage.getItem('token');
-            const data = {
-                id: document.getElementById('piloto_id').value,
-                nombre_completo: document.getElementById('piloto_nombre').value,
-                grado_code: document.getElementById('piloto_grado').value,
-                email: document.getElementById('piloto_email').value,
-                password: document.getElementById('piloto_password').value,
-                tipo_sangre: document.getElementById('piloto_sangre').value,
-                nacionalidad: document.getElementById('piloto_nacionalidad').value,
-                rol: document.getElementById('piloto_rol').value,
-            
-                foto_url: document.getElementById('piloto_foto').value || null
-            };
-            
-            const res = await fetch('/api/admin/pilotos', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify(data)
-            });
-            
-            if (res.ok) {
-                mostrarAlerta('Piloto creado', 'success');
-                cerrarModalPiloto();
-                cargarPilotos();
-                cargarStats();
-            } else {
-                const result = await res.json();
-                mostrarAlerta(result.error || 'No se pudo crear', 'error');
-            }
-        });
-        
-        document.getElementById('formEditarPiloto').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const id = document.getElementById('edit_piloto_id').value;
-    const token = localStorage.getItem('token');
-    
-    const data = {
-        nombre_completo: document.getElementById('edit_piloto_nombre').value,
-        email: document.getElementById('edit_piloto_email').value,
-        foto_url: document.getElementById('edit_piloto_foto').value || null,
-        discord_id: document.getElementById('edit_piloto_discord_id').value || null
-    };
-    
-    const res = await fetch(`/api/admin/pilotos/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify(data)
-    });
-    
-    if (res.ok) {
-        // Actualizar localStorage si es el mismo usuario
-        if (id === pilotoActual.id) {
-            const pilotoActualizado = JSON.parse(localStorage.getItem('piloto'));
-            pilotoActualizado.nombre = data.nombre_completo;
-            pilotoActualizado.email = data.email;
-            pilotoActualizado.foto_url = data.foto_url;
-            localStorage.setItem('piloto', JSON.stringify(pilotoActualizado));
-        }
-        mostrarAlerta('✅ Piloto actualizado', 'success');
-        cerrarModalEditarPiloto();
-        cargarPilotos();
-    } else {
-        mostrarAlerta('❌ Error al actualizar', 'error');
-    }
-});
-        
-        document.getElementById('formAeronave').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const token = localStorage.getItem('token');
-            const data = {
-                id: document.getElementById('aeronave_id').value,
-                modelo: document.getElementById('aeronave_modelo').value,
-                nivel: document.getElementById('aeronave_nivel').value,
-                tipo: document.getElementById('aeronave_tipo').value,
-                estado: document.getElementById('aeronave_estado').value,
-                imagen_url: document.getElementById('aeronave_imagen').value || null
-            };
-            
-            const res = await fetch('/api/admin/aeronaves', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify(data)
-            });
-            
-            if (res.ok) {
-                mostrarAlerta('Aeronave agregada', 'success');
-                cerrarModalAeronave();
-                cargarAeronaves();
-                cargarStats();
-            } else {
-                const result = await res.json();
-                mostrarAlerta(result.error || 'No se pudo agregar', 'error');
-            }
-        });
-        
-        document.getElementById('formEditarAeronave').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const id = document.getElementById('edit_aeronave_id').value;
-            const token = localStorage.getItem('token');
-            
-            const data = {
-                modelo: document.getElementById('edit_aeronave_modelo').value,
-                nivel: document.getElementById('edit_aeronave_nivel').value,
-                tipo: document.getElementById('edit_aeronave_tipo').value,
-                estado: document.getElementById('edit_aeronave_estado').value,
-                imagen_url: document.getElementById('edit_aeronave_imagen').value || null
-            };
-            
-            const res = await fetch(`/api/admin/aeronaves/${id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify(data)
-            });
-            
-            if (res.ok) {
-                mostrarAlerta('Aeronave actualizada', 'success');
-                cerrarModalEditarAeronave();
-                cargarAeronaves();
-                cargarStats();
-            } else {
-                mostrarAlerta('Error al actualizar', 'error');
-            }
-        });
-        
-        document.getElementById('formPassword').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const token = localStorage.getItem('token');
-            const res = await fetch(`/api/admin/pilotos/${pilotoIdSeleccionado}/password`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify({ newPassword: document.getElementById('newPassword').value })
-            });
-            if (res.ok) {
-                mostrarAlerta('Contraseña actualizada', 'success');
-
-                cerrarModalPassword();
-            } else {
-                mostrarAlerta('Error al cambiar contraseña', 'error');
-
-            }
-        });
-        // ============================================
-// FORMULARIO CREAR AERONAVE (CORREGIDO)
-// ============================================
-
-document.getElementById('formAeronave').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const token = localStorage.getItem('token');
-    
-    const imagen_url = document.getElementById('aeronave_imagen').value || null;
-    
-    const data = {
-        id: document.getElementById('aeronave_id').value,
-        modelo: document.getElementById('aeronave_modelo').value,
-        nivel: document.getElementById('aeronave_nivel').value,
-        tipo: document.getElementById('aeronave_tipo').value,
-        estado: document.getElementById('aeronave_estado').value,
-        imagen_url: imagen_url
-    };
-    
-    console.log('📤 Enviando aeronave:', JSON.stringify(data));
-    
-    const res = await fetch('/api/admin/aeronaves', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify(data)
-    });
-    
-    if (res.ok) {
-        mostrarAlerta('✅ Aeronave agregada. Ahora edítala para subir una imagen.', 'success');
-        cerrarModalAeronave();
-        cargarAeronaves();
-        cargarStats();
-    } else {
-        const result = await res.json();
-        mostrarAlerta('❌ ' + (result.error || 'No se pudo agregar'), 'error');
-    }
-});
-        
-        // ============================================
-        // NAVEGACIÓN Y TABS
-        // ============================================
-        
-        function showTab(tab) {
-    // Verificar que event existe antes de usarlo
-    const botones = document.querySelectorAll('.tab-btn');
-    botones.forEach(btn => btn.classList.remove('active'));
-    
-    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-    document.getElementById(`tab-${tab}`).classList.add('active');
-    
-    // Marcar el botón activo
-    const botonActivo = Array.from(botones).find(btn => btn.getAttribute('onclick')?.includes(`'${tab}'`));
-    if (botonActivo) {
-        botonActivo.classList.add('active');
-    }
-    
-    if (tab === 'pilotos') cargarPilotos();
-    if (tab === 'aeronaves') cargarAeronaves();
-    if (tab === 'rangos') cargarRangosAdmin();
-}
-        
-        function cerrarSesion() { localStorage.clear(); window.location.href = 'index.html'; }
-        function toggleMobileMenu() { document.getElementById('sidebar').classList.toggle('mobile-open'); }
-        function toggleProfileDropdown() { document.getElementById('profileDropdown').classList.toggle('show'); }
-        function closeDropdownOnClickOutside(e) {
-            const btn = document.getElementById('profileBtn');
-            const dd = document.getElementById('profileDropdown');
-            if (!btn.contains(e.target) && !dd.contains(e.target)) dd.classList.remove('show');
-        }
-        
-        async function editarMiPerfil() {
-            const token = localStorage.getItem('token');
-            const id = pilotoActual.id;
-            
-            const res = await fetch(`/api/admin/pilotos/${id}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            const data = await res.json();
-            const p = data.piloto;
-            
-            document.getElementById('edit_piloto_id').value = p.id;
-            document.getElementById('edit_piloto_nombre').value = p.nombre_completo;
-            document.getElementById('edit_piloto_email').value = p.email;
-            document.getElementById('edit_piloto_foto').value = p.foto_url || '';
-            
-            document.getElementById('modalEditarPiloto').style.display = 'flex';
-        }
-        
-        document.getElementById('menuToggle').addEventListener('click', toggleMobileMenu);
-        document.getElementById('profileBtn').addEventListener('click', toggleProfileDropdown);
-        document.getElementById('miPerfilBtn').addEventListener('click', editarMiPerfil);
-        document.getElementById('cerrarSesionBtn').addEventListener('click', cerrarSesion);
-        document.addEventListener('click', closeDropdownOnClickOutside);
-        
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                cerrarModalPiloto();
-                cerrarModalEditarPiloto();
-                cerrarModalAeronave();
-                cerrarModalEditarAeronave();
-                cerrarModalPassword();
-            }
-        });
-        
-      async function init() {
-    if (!verificarAcceso()) return;
-    
-    if (pilotoActual.rol === 'Admin') {
-        await cargarRangos();
-        await cargarStats();
-        await cargarPilotos();
-        await cargarAeronaves();
-    } else if (pilotoActual.rol === 'Supervisor') {
-        await cargarPilotos();
-    }
-    
-    // Iniciar verificación periódica de rol (cada 10 segundos)
-    setInterval(verificarRolPeriodicamente, 10000);
-}
-        
-        init();
-
-        // Verificar rol y estado periódicamente (cada 10 segundos)
-function iniciarVerificacionPeriodica() {
-    setInterval(async () => {
+    // ============================================
+    // VERIFICACIÓN DE ROL PERIÓDICA
+    // ============================================
+    async function verificarRolPeriodicamente() {
         const token = localStorage.getItem('token');
         const piloto = localStorage.getItem('piloto');
         if (!token || !piloto) return;
-        
         const pilotoData = JSON.parse(piloto);
-        
-        // Si es Admin, no verificar (opcional, puedes quitarlo si quieres que también verifique)
         if (pilotoData.rol === 'Admin') return;
         
         try {
-            const response = await fetch(`/api/pilotos/${pilotoData.id}`, {
+            const response = await fetch(`${API_BASE_URL}/api/pilotos/${pilotoData.id}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
-            
             if (response.ok) {
                 const data = await response.json();
-                const rolEnBD = data.piloto?.rol;
-                const activoEnBD = data.piloto?.activo;
-                
-                // Verificar si fue archivado
-                if (activoEnBD === 0) {
-                    console.log('⚠️ Usuario archivado!');
-                    mostrarModalSesionExpirada('Su cuenta ha sido desactivada. Ya no pertenece a la Fuerza Aérea de LSAF.');
-                    return;
-                }
-                
-                // Verificar cambio de rol
-                if (rolEnBD && rolEnBD !== pilotoData.rol) {
-                    console.log('⚠️ Rol cambiado!');
-                    mostrarModalSesionExpirada('Su rol ha sido modificado. Debe volver a iniciar sesión.');
+                if (data.piloto?.activo === 0) {
+                    mostrarModalSesionExpirada('Su cuenta ha sido desactivada.');
+                } else if (data.piloto?.rol && data.piloto.rol !== pilotoData.rol) {
+                    mostrarModalSesionExpirada('Su rol ha sido modificado.');
                 }
             }
         } catch (error) {
             console.error('Error al verificar:', error);
         }
-    }, 10000); // Cada 10 segundos
-}
+    }
 
-// Llamar a esta función después de iniciar sesión
-iniciarVerificacionPeriodica();
-    </script>
+    // ============================================
+    // VERIFICAR ACCESO
+    // ============================================
+    function verificarAcceso() {
+        const token = localStorage.getItem('token');
+        const piloto = localStorage.getItem('piloto');
+        
+        if (!token || !piloto) { window.location.href = 'index.html'; return false; }
+        
+        pilotoActual = JSON.parse(piloto);
+        
+        if (pilotoActual.rol !== 'Admin' && pilotoActual.rol !== 'Supervisor') {
+            window.location.href = 'pilotos.html';
+            return false;
+        }
+        
+        document.getElementById('profileName').textContent = pilotoActual.nombre;
+        document.getElementById('profileRank').textContent = pilotoActual.grado;
+        
+        const iniciales = pilotoActual.nombre.split(' ').map(n => n[0]).join('');
+        const avatarImg = document.getElementById('avatarImg');
+        const avatarTexto = document.getElementById('avatarTexto');
+        
+        if (pilotoActual.foto_url && pilotoActual.foto_url !== '') {
+            let fotoUrl = pilotoActual.foto_url;
+            if (!fotoUrl.startsWith('http')) fotoUrl = `${API_BASE_URL}${fotoUrl}`;
+            avatarImg.style.display = 'block';
+            avatarTexto.style.display = 'none';
+            avatarImg.src = fotoUrl;
+        } else {
+            avatarImg.style.display = 'none';
+            avatarTexto.style.display = 'block';
+            avatarTexto.textContent = iniciales.substring(0, 2);
+        }
+        
+        if (pilotoActual.rol === 'Supervisor') {
+            const tabAeronaves = document.querySelector('.tab-btn[onclick="showTab(\'aeronaves\')"]');
+            const tabRangos = document.querySelector('.tab-btn[onclick="showTab(\'rangos\')"]');
+            if (tabAeronaves) tabAeronaves.style.display = 'none';
+            if (tabRangos) tabRangos.style.display = 'none';
+        }
+        
+        if (document.getElementById('sidebarLogo') && typeof ORG_CONFIG !== 'undefined') {
+            document.getElementById('sidebarLogo').src = ORG_CONFIG.logos.principal;
+            document.getElementById('sidebarNombre').textContent = ORG_CONFIG.nombre;
+            document.getElementById('sidebarSubtitulo').textContent = ORG_CONFIG.textos.sistema;
+            document.getElementById('logo1').src = ORG_CONFIG.logos.secundario1;
+            document.getElementById('logo2').src = ORG_CONFIG.logos.secundario2;
+        }
+        
+        document.title = `Admin Panel - ${typeof ORG_CONFIG !== 'undefined' ? ORG_CONFIG.nombre : 'LSAF'}`;
+        
+        document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+        document.getElementById('tab-pilotos').classList.add('active');
+        
+        return true;
+    }
+
+    // ============================================
+    // GENERAR ID
+    // ============================================
+    function generarID() {
+        const numero = Math.floor(Math.random() * 9000) + 1000;
+        return `AF${numero}`;
+    }
+
+    // ============================================
+    // CARGAR RANGOS
+    // ============================================
+    async function cargarRangos() {
+        const token = localStorage.getItem('token');
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/admin/rangos-public`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await response.json();
+            listaRangos = data.ranks || [];
+            return listaRangos;
+        } catch (error) {
+            console.error('Error al cargar rangos:', error);
+            return [];
+        }
+    }
+
+    async function cargarRangosSelect() {
+        const rangos = await cargarRangos();
+        const select = document.getElementById('piloto_grado');
+        if (select && rangos.length > 0) {
+            select.innerHTML = '<option value="">Selecciona un rango</option>';
+            rangos.forEach(rango => {
+                select.innerHTML += `<option value="${rango.code}">${rango.code} - ${rango.nombre}</option>`;
+            });
+        }
+    }
+
+    // ============================================
+    // SUBIR IMAGEN
+    // ============================================
+    async function subirImagen(endpoint, file, id, previewElement, progressElement, inputUrlElement) {
+        const formData = new FormData();
+        formData.append('imagen', file);
+        const token = localStorage.getItem('token');
+        
+        return new Promise((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', `${API_BASE_URL}/api/admin/upload/${endpoint}/${id}`, true);
+            xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+            
+            xhr.upload.onprogress = function(e) {
+                if (e.lengthComputable && progressElement) {
+                    progressElement.value = (e.loaded / e.total) * 100;
+                }
+            };
+            
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    const response = JSON.parse(xhr.responseText);
+                    if (inputUrlElement) inputUrlElement.value = response.url;
+                    if (previewElement) {
+                        previewElement.style.display = 'block';
+                        const img = previewElement.querySelector('img');
+                        if (img) img.src = response.url;
+                    }
+                    resolve(response);
+                } else {
+                    reject(new Error('Error al subir imagen'));
+                }
+            };
+            
+            xhr.onerror = () => reject(new Error('Error de conexión'));
+            xhr.send(formData);
+        });
+    }
+
+    // ============================================
+    // CRUD PILOTOS
+    // ============================================
+    async function cargarPilotos() {
+        const token = localStorage.getItem('token');
+        const incluirInactivos = document.getElementById('incluirInactivos')?.checked || false;
+        const tbody = document.querySelector('#tablaPilotos tbody');
+        const esAdmin = pilotoActual.rol === 'Admin';
+        const esSupervisor = pilotoActual.rol === 'Supervisor';
+        
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">Cargando...</tbody>';
+        
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/admin/pilotos?incluirInactivos=${incluirInactivos}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            
+            if (!res.ok) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color:red;">Error de permisos</tbody>';
+                return;
+            }
+            
+            const data = await res.json();
+            
+            if (!data.pilotos || data.pilotos.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">No hay pilotos registrados</tbody>';
+                return;
+            }
+            
+            tbody.innerHTML = data.pilotos.map(p => {
+                const estaActivo = p.activo !== 0;
+                const esAdminObjetivo = p.rol === 'Admin';
+                const puedeModificar = esAdmin || (esSupervisor && !esAdminObjetivo);
+                
+                const estadoBadge = estaActivo 
+                    ? '<span class="badge-rol" style="background: #28a745;">✅ Activo</span>'
+                    : '<span class="badge-rol" style="background: #dc3545;">📦 Archivado</span>';
+                
+                let rolColumn = '';
+                if (esAdmin) {
+                    rolColumn = `
+                        <select class="rol-select" onchange="cambiarRol('${p.id}', this.value)">
+                            <option value="Piloto" ${p.rol === 'Piloto' ? 'selected' : ''}>👨‍✈️ Piloto</option>
+                            <option value="Instructor" ${p.rol === 'Instructor' ? 'selected' : ''}>📚 Instructor</option>
+                            <option value="Supervisor" ${p.rol === 'Supervisor' ? 'selected' : ''}>👁️ Supervisor</option>
+                            <option value="Admin" ${p.rol === 'Admin' ? 'selected' : ''}>👑 Admin</option>
+                        </select>`;
+                } else {
+                    const rolIcono = p.rol === 'Admin' ? '👑' : (p.rol === 'Supervisor' ? '👁️' : (p.rol === 'Instructor' ? '📚' : '👨‍✈️'));
+                    rolColumn = `<span class="badge-rol" style="background: var(--af-sky);">${rolIcono} ${p.rol}</span>`;
+                }
+                
+                const editarBtn = puedeModificar ? `<button class="btn-small btn-primary-small" onclick="editarPiloto('${p.id}')"><i class="fas fa-edit"></i></button>` : '';
+                const passwordBtn = puedeModificar ? `<button class="btn-small btn-primary-small" onclick="abrirModalPassword('${p.id}')"><i class="fas fa-key"></i></button>` : '';
+                const ascenderBtn = puedeModificar ? `<button class="btn-small btn-success-small" onclick="ascenderPiloto('${p.id}')"><i class="fas fa-arrow-up"></i></button>` : '';
+                const degradarBtn = puedeModificar ? `<button class="btn-small btn-warning-small" onclick="degradarPiloto('${p.id}')"><i class="fas fa-arrow-down"></i></button>` : '';
+                const archivarBtn = puedeModificar ? (estaActivo 
+                    ? `<button class="btn-small btn-warning-small" onclick="archivarPiloto('${p.id}')"><i class="fas fa-archive"></i></button>`
+                    : `<button class="btn-small btn-success-small" onclick="activarPiloto('${p.id}')"><i class="fas fa-trash-restore"></i></button>`) : '';
+                const eliminarBtn = esAdmin && p.id !== pilotoActual.id ? `<button class="btn-small btn-danger-small" onclick="eliminarPiloto('${p.id}')"><i class="fas fa-trash"></i></button>` : '';
+                
+                return `
+                    <tr>
+                        <td>${p.id}${!estaActivo ? ' <span style="color:red;">(Archivado)</span>' : ''}</td>
+                        <td>${p.nombre_completo}</td>
+                        <td>${p.grado_nombre || p.grado_code}</td>
+                        <td>${p.email}</td>
+                        <td>${estadoBadge}<br>${rolColumn}</td>
+                        <td>${editarBtn}${passwordBtn}${ascenderBtn}${degradarBtn}${archivarBtn}${eliminarBtn}</td>
+                    </tr>`;
+            }).join('');
+        } catch (error) {
+            console.error('Error:', error);
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color:red;">Error al cargar</tbody>';
+        }
+    }
+
+    async function cambiarRol(id, nuevoRol) {
+        const token = localStorage.getItem('token');
+        const pilotoActualLogueado = JSON.parse(localStorage.getItem('piloto'));
+        const esMismoUsuario = pilotoActualLogueado.id === id;
+        
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/admin/pilotos/${id}/rol`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ rol: nuevoRol })
+            });
+            
+            if (res.ok) {
+                mostrarAlerta(`Rol actualizado a ${nuevoRol}`, 'success');
+                if (esMismoUsuario) { mostrarModalSesionExpirada(); }
+                else { cargarPilotos(); }
+            } else {
+                const error = await res.json();
+                mostrarAlerta(error.error || 'No se pudo actualizar', 'error');
+            }
+        } catch (error) {
+            mostrarAlerta('Error al cambiar el rol', 'error');
+        }
+    }
+
+    async function editarPiloto(id) {
+        const token = localStorage.getItem('token');
+        if (pilotoActual.rol !== 'Admin' && pilotoActual.rol !== 'Supervisor') {
+            mostrarAlerta('No tienes permiso', 'error'); return;
+        }
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/admin/pilotos/${id}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!response.ok) { mostrarAlerta('No se pudo cargar', 'error'); return; }
+            const data = await response.json();
+            const p = data.piloto;
+            document.getElementById('edit_piloto_id').value = p.id;
+            document.getElementById('edit_piloto_nombre').value = p.nombre_completo;
+            document.getElementById('edit_piloto_email').value = p.email;
+            document.getElementById('edit_piloto_discord_id').value = p.discord_id || '';
+            document.getElementById('edit_piloto_foto').value = p.foto_url || '';
+            document.getElementById('modalEditarPiloto').style.display = 'flex';
+        } catch (error) {
+            mostrarAlerta('Error al cargar', 'error');
+        }
+    }
+
+    async function ascenderPiloto(id) {
+        if (pilotoActual.rol !== 'Admin' && pilotoActual.rol !== 'Supervisor') { mostrarAlerta('No tienes permiso', 'error'); return; }
+        const motivo = prompt('Motivo del ascenso:');
+        const token = localStorage.getItem('token');
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/admin/pilotos/${id}/cambiar-grado`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ tipo: 'ascenso', motivo: motivo || null })
+            });
+            const result = await res.json();
+            if (res.ok) { mostrarAlerta(result.mensaje, 'success'); cargarPilotos(); }
+            else { mostrarAlerta('❌ ' + result.error, 'error'); }
+        } catch (error) { mostrarAlerta('❌ Error', 'error'); }
+    }
+
+    async function degradarPiloto(id) {
+        if (pilotoActual.rol !== 'Admin' && pilotoActual.rol !== 'Supervisor') { mostrarAlerta('No tienes permiso', 'error'); return; }
+        const motivo = prompt('Motivo del descenso:');
+        const token = localStorage.getItem('token');
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/admin/pilotos/${id}/cambiar-grado`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ tipo: 'descenso', motivo: motivo || null })
+            });
+            const result = await res.json();
+            if (res.ok) { mostrarAlerta(result.mensaje, 'success'); cargarPilotos(); }
+            else { mostrarAlerta('❌ ' + result.error, 'error'); }
+        } catch (error) { mostrarAlerta('❌ Error', 'error'); }
+    }
+
+    async function archivarPiloto(id) {
+        if (pilotoActual.rol !== 'Admin' && pilotoActual.rol !== 'Supervisor') { mostrarAlerta('No tienes permiso', 'error'); return; }
+        if (!confirm('¿Archivar este piloto?')) return;
+        const token = localStorage.getItem('token');
+        const esMismoUsuario = JSON.parse(localStorage.getItem('piloto')).id === id;
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/admin/pilotos/${id}/archivar`, {
+                method: 'PUT', headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                if (esMismoUsuario) {
+                    mostrarAlerta('Cuenta archivada. Cerrando sesión...', 'warning');
+                    setTimeout(() => { localStorage.clear(); window.location.href = 'index.html'; }, 2000);
+                } else { mostrarAlerta('✅ Piloto archivado', 'success'); cargarPilotos(); cargarStats(); }
+            } else { mostrarAlerta('❌ Error', 'error'); }
+        } catch (error) { mostrarAlerta('❌ Error', 'error'); }
+    }
+
+    async function activarPiloto(id) {
+        if (pilotoActual.rol !== 'Admin' && pilotoActual.rol !== 'Supervisor') { mostrarAlerta('No tienes permiso', 'error'); return; }
+        if (!confirm('¿Activar este piloto?')) return;
+        const token = localStorage.getItem('token');
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/admin/pilotos/${id}/activar`, {
+                method: 'PUT', headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) { mostrarAlerta('✅ Piloto activado', 'success'); cargarPilotos(); cargarStats(); }
+            else { mostrarAlerta('❌ Error', 'error'); }
+        } catch (error) { mostrarAlerta('❌ Error', 'error'); }
+    }
+
+    async function eliminarPiloto(id) {
+        if (!confirm('¿Eliminar este piloto permanentemente?')) return;
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${API_BASE_URL}/api/admin/pilotos/${id}`, {
+            method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) { mostrarAlerta('Piloto eliminado', 'success'); cargarPilotos(); cargarStats(); }
+        else { mostrarAlerta('Error al eliminar', 'error'); }
+    }
+
+    // ============================================
+    // CRUD AERONAVES
+    // ============================================
+    async function cargarAeronaves() {
+        const token = localStorage.getItem('token');
+        const tbody = document.querySelector('#tablaAeronaves tbody');
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">Cargando...</tbody>';
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/admin/aeronaves`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await res.json();
+            if (!data.aeronaves || data.aeronaves.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">No hay aeronaves</tbody>';
+                return;
+            }
+            tbody.innerHTML = data.aeronaves.map(a => `
+                <tr>
+                    <td>${a.id}</td><td>${a.modelo}</td><td>${a.nivel || 'Básico'}</td>
+                    <td>${a.tipo || 'Ala fija'}</td><td>${a.estado}</td>
+                    <td>
+                        <button class="btn-small btn-primary-small" onclick="editarAeronave('${a.id}')"><i class="fas fa-edit"></i></button>
+                        <button class="btn-small btn-danger-small" onclick="eliminarAeronave('${a.id}')"><i class="fas fa-trash"></i></button>
+                    </td>
+                </tr>`).join('');
+        } catch (error) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color:red;">Error al cargar</tbody>';
+        }
+    }
+
+    async function editarAeronave(id) {
+        const token = localStorage.getItem('token');
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/admin/aeronaves/${encodeURIComponent(id)}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!response.ok) { mostrarAlerta('No se pudo cargar', 'error'); return; }
+            const data = await response.json();
+            if (!data.aeronave) { mostrarAlerta('Aeronave no encontrada', 'error'); return; }
+            const a = data.aeronave;
+            document.getElementById('edit_aeronave_id').value = a.id;
+            document.getElementById('edit_aeronave_modelo').value = a.modelo;
+            document.getElementById('edit_aeronave_nivel').value = a.nivel || 'Básico';
+            document.getElementById('edit_aeronave_tipo').value = a.tipo || 'Ala fija';
+            document.getElementById('edit_aeronave_estado').value = a.estado;
+            document.getElementById('edit_aeronave_imagen').value = a.imagen_url || '';
+            document.getElementById('modalEditarAeronave').style.display = 'flex';
+        } catch (error) {
+            mostrarAlerta('Error al cargar', 'error');
+        }
+    }
+
+    async function eliminarAeronave(id) {
+        if (!confirm('¿Eliminar esta aeronave?')) return;
+        const token = localStorage.getItem('token');
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/admin/aeronaves/${encodeURIComponent(id)}`, {
+                method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) { mostrarAlerta('Aeronave eliminada', 'success'); cargarAeronaves(); cargarStats(); }
+            else { mostrarAlerta('Error al eliminar', 'error'); }
+        } catch (error) { mostrarAlerta('Error', 'error'); }
+    }
+
+    // ============================================
+    // CRUD RANGOS
+    // ============================================
+    async function cargarRangosAdmin() {
+        const tbody = document.querySelector('#tablaRangos tbody');
+        if (!rangosEditables || rangosEditables.length === 0) {
+            const token = localStorage.getItem('token');
+            const res = await fetch(`${API_BASE_URL}/api/admin/rangos`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await res.json();
+            rangosEditables = data.ranks || [];
+        }
+        
+        tbody.innerHTML = rangosEditables.map((r, index) => {
+            const logoUrl = r.logo_url ? `${API_BASE_URL}${r.logo_url}` : null;
+            const logoHtml = logoUrl 
+                ? `<img src="${logoUrl}" class="rango-logo-tabla" onerror="this.style.display='none';">`
+                : `<div style="width:40px;height:40px;background:var(--af-gray);border-radius:5px;display:flex;align-items:center;justify-content:center;"><i class="fas fa-image"></i></div>`;
+            
+            return `
+                <tr>
+                    <td>${logoHtml}<br><button class="btn-small btn-primary-small" onclick="subirLogoRango(${r.id}, ${index})">Subir Logo</button></td>
+                    <td><input type="text" class="rango-code" value="${r.code}" data-index="${index}" style="width:100px"></td>
+                    <td><input type="text" class="rango-name" value="${r.nombre}" data-index="${index}" style="width:200px"></td>
+                    <td><input type="number" class="rango-order" value="${r.orden}" data-index="${index}" style="width:80px"></td>
+                    <td><input type="text" class="rango-discord-role" value="${r.discord_role_id || ''}" data-index="${index}" style="width:150px" placeholder="ID del rol"></td>
+                    <td><button class="btn-small btn-danger-small" onclick="eliminarRangoFila(${index})">Eliminar</button></td>
+                </tr>`;
+        }).join('');
+        
+        // Sincronizar inputs
+        document.querySelectorAll('.rango-code, .rango-name, .rango-order, .rango-discord-role').forEach(input => {
+            input.addEventListener('input', function() {
+                const index = parseInt(this.dataset.index);
+                if (rangosEditables[index]) {
+                    if (this.classList.contains('rango-code')) rangosEditables[index].code = this.value;
+                    else if (this.classList.contains('rango-name')) rangosEditables[index].nombre = this.value;
+                    else if (this.classList.contains('rango-order')) rangosEditables[index].orden = parseInt(this.value) || 999;
+                    else if (this.classList.contains('rango-discord-role')) rangosEditables[index].discord_role_id = this.value;
+                }
+            });
+        });
+    }
+
+    async function subirLogoRango(rangoId, index) {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.onchange = async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const formData = new FormData();
+            formData.append('imagen', file);
+            const token = localStorage.getItem('token');
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/admin/upload/rango/${rangoId}`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    body: formData
+                });
+                const result = await response.json();
+                if (response.ok) {
+                    mostrarAlerta('Logo subido correctamente', 'success');
+                    cargarRangosAdmin();
+                } else {
+                    mostrarAlerta(result.error || 'Error al subir logo', 'error');
+                }
+            } catch (error) {
+                mostrarAlerta('Error de conexión', 'error');
+            }
+        };
+        input.click();
+    }
+
+    function agregarRango() {
+        if (!rangosEditables) rangosEditables = [];
+        rangosEditables.push({ code: 'NEW', nombre: 'Nuevo Rango', orden: rangosEditables.length + 1 });
+        cargarRangosAdmin();
+    }
+
+    function eliminarRangoFila(index) {
+        rangosEditables.splice(index, 1);
+        cargarRangosAdmin();
+    }
+
+    async function guardarRangos() {
+        const codes = document.querySelectorAll('.rango-code');
+        const names = document.querySelectorAll('.rango-name');
+        const orders = document.querySelectorAll('.rango-order');
+        const discordRoles = document.querySelectorAll('.rango-discord-role');
+        
+        const nuevosRangos = [];
+        for (let i = 0; i < codes.length; i++) {
+            const rangoOriginal = rangosEditables[i] || {};
+            nuevosRangos.push({
+                code: codes[i].value,
+                name: names[i].value,
+                orden: parseInt(orders[i].value) || 999,
+                logo_url: rangoOriginal.logo_url || null,
+                discord_role_id: discordRoles[i]?.value || null
+            });
+        }
+        
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_BASE_URL}/api/admin/rangos`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ ranks: nuevosRangos })
+        });
+        
+        const result = await response.json();
+        if (response.ok) {
+            mostrarAlerta('✅ Rangos guardados', 'success');
+            rangosEditables = nuevosRangos;
+            cargarRangosAdmin();
+        } else {
+            mostrarAlerta('❌ Error: ' + (result.error || 'No se pudieron guardar'), 'error');
+        }
+    }
+
+    // ============================================
+    // ESTADÍSTICAS
+    // ============================================
+    async function cargarStats() {
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${API_BASE_URL}/api/admin/stats`, { headers: { 'Authorization': `Bearer ${token}` } });
+        const data = await res.json();
+        document.getElementById('statsContainer').innerHTML = `
+            <div class="stat-card-admin"><div class="stat-number">${data.stats.totalPilotos}</div><div class="stat-label">Pilotos Activos</div></div>
+            <div class="stat-card-admin"><div class="stat-number">${data.stats.totalAeronaves}</div><div class="stat-label">Aeronaves</div></div>
+            <div class="stat-card-admin"><div class="stat-number">${data.stats.solicitudesPendientes}</div><div class="stat-label">Solicitudes Pendientes</div></div>
+            <div class="stat-card-admin"><div class="stat-number">${data.stats.totalVuelos || 0}</div><div class="stat-label">Vuelos Registrados</div></div>`;
+    }
+
+    // ============================================
+    // MODALES
+    // ============================================
+    function abrirModalPiloto() {
+        document.getElementById('modalPiloto').style.display = 'flex';
+        document.getElementById('formPiloto').reset();
+        document.getElementById('fotoPreview').style.display = 'none';
+        document.getElementById('piloto_id').value = generarID();
+        cargarRangosSelect();
+        const selectRol = document.getElementById('piloto_rol');
+        if (pilotoActual.rol === 'Supervisor') {
+            selectRol.innerHTML = `
+                <option value="Piloto">👨‍✈️ Piloto</option>
+                <option value="Instructor">📚 Instructor</option>
+                <option value="Supervisor">👁️ Supervisor</option>`;
+        } else {
+            selectRol.innerHTML = `
+                <option value="Piloto">👨‍✈️ Piloto</option>
+                <option value="Instructor">📚 Instructor</option>
+                <option value="Supervisor">👁️ Supervisor</option>
+                <option value="Admin">👑 Admin</option>`;
+        }
+    }
+
+    function cerrarModalPiloto() { document.getElementById('modalPiloto').style.display = 'none'; }
+    function cerrarModalEditarPiloto() { document.getElementById('modalEditarPiloto').style.display = 'none'; }
+    function abrirModalAeronave() { document.getElementById('modalAeronave').style.display = 'flex'; }
+    function cerrarModalAeronave() { document.getElementById('modalAeronave').style.display = 'none'; }
+    function cerrarModalEditarAeronave() { document.getElementById('modalEditarAeronave').style.display = 'none'; }
+    function abrirModalPassword(id) { pilotoIdSeleccionado = id; document.getElementById('modalPassword').style.display = 'flex'; }
+    function cerrarModalPassword() { document.getElementById('modalPassword').style.display = 'none'; }
+
+    // ============================================
+    // EVENTOS DE FORMULARIOS
+    // ============================================
+    document.getElementById('formPiloto').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const token = localStorage.getItem('token');
+        const data = {
+            id: document.getElementById('piloto_id').value,
+            nombre_completo: document.getElementById('piloto_nombre').value,
+            grado_code: document.getElementById('piloto_grado').value,
+            email: document.getElementById('piloto_email').value,
+            password: document.getElementById('piloto_password').value,
+            tipo_sangre: document.getElementById('piloto_sangre').value,
+            nacionalidad: document.getElementById('piloto_nacionalidad').value,
+            rol: document.getElementById('piloto_rol').value,
+            foto_url: document.getElementById('piloto_foto').value || null
+        };
+        const res = await fetch(`${API_BASE_URL}/api/admin/pilotos`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify(data)
+        });
+        if (res.ok) { mostrarAlerta('Piloto creado', 'success'); cerrarModalPiloto(); cargarPilotos(); cargarStats(); }
+        else { const result = await res.json(); mostrarAlerta(result.error || 'No se pudo crear', 'error'); }
+    });
+
+    document.getElementById('formEditarPiloto').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const id = document.getElementById('edit_piloto_id').value;
+        const token = localStorage.getItem('token');
+        const data = {
+            nombre_completo: document.getElementById('edit_piloto_nombre').value,
+            email: document.getElementById('edit_piloto_email').value,
+            foto_url: document.getElementById('edit_piloto_foto').value || null,
+            discord_id: document.getElementById('edit_piloto_discord_id').value || null
+        };
+        const res = await fetch(`${API_BASE_URL}/api/admin/pilotos/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify(data)
+        });
+        if (res.ok) {
+            if (id === pilotoActual.id) {
+                const p = JSON.parse(localStorage.getItem('piloto'));
+                p.nombre = data.nombre_completo; p.email = data.email; p.foto_url = data.foto_url;
+                localStorage.setItem('piloto', JSON.stringify(p));
+            }
+            mostrarAlerta('✅ Piloto actualizado', 'success');
+            cerrarModalEditarPiloto();
+            cargarPilotos();
+        } else { mostrarAlerta('❌ Error', 'error'); }
+    });
+
+    document.getElementById('formAeronave').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const token = localStorage.getItem('token');
+        const data = {
+            id: document.getElementById('aeronave_id').value,
+            modelo: document.getElementById('aeronave_modelo').value,
+            nivel: document.getElementById('aeronave_nivel').value,
+            tipo: document.getElementById('aeronave_tipo').value,
+            estado: document.getElementById('aeronave_estado').value,
+            imagen_url: document.getElementById('aeronave_imagen').value || null
+        };
+        const res = await fetch(`${API_BASE_URL}/api/admin/aeronaves`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify(data)
+        });
+        if (res.ok) { mostrarAlerta('Aeronave agregada', 'success'); cerrarModalAeronave(); cargarAeronaves(); cargarStats(); }
+        else { const result = await res.json(); mostrarAlerta(result.error || 'Error', 'error'); }
+    });
+
+    document.getElementById('formEditarAeronave').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const id = document.getElementById('edit_aeronave_id').value;
+        const token = localStorage.getItem('token');
+        const data = {
+            modelo: document.getElementById('edit_aeronave_modelo').value,
+            nivel: document.getElementById('edit_aeronave_nivel').value,
+            tipo: document.getElementById('edit_aeronave_tipo').value,
+            estado: document.getElementById('edit_aeronave_estado').value,
+            imagen_url: document.getElementById('edit_aeronave_imagen').value || null
+        };
+        const res = await fetch(`${API_BASE_URL}/api/admin/aeronaves/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify(data)
+        });
+        if (res.ok) { mostrarAlerta('Aeronave actualizada', 'success'); cerrarModalEditarAeronave(); cargarAeronaves(); cargarStats(); }
+        else { mostrarAlerta('Error', 'error'); }
+    });
+
+    document.getElementById('formPassword').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${API_BASE_URL}/api/admin/pilotos/${pilotoIdSeleccionado}/password`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ newPassword: document.getElementById('newPassword').value })
+        });
+        if (res.ok) { mostrarAlerta('Contraseña actualizada', 'success'); cerrarModalPassword(); }
+        else { mostrarAlerta('Error', 'error'); }
+    });
+
+    // ============================================
+    // SUBIR IMAGEN EN EDICIÓN
+    // ============================================
+    const uploadAreaEditarPiloto = document.getElementById('uploadAreaEditarPiloto');
+    const fotoArchivoEditarPiloto = document.getElementById('fotoArchivoEditarPiloto');
+    if (uploadAreaEditarPiloto) {
+        uploadAreaEditarPiloto.addEventListener('click', () => fotoArchivoEditarPiloto.click());
+        fotoArchivoEditarPiloto.addEventListener('change', async function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const id = document.getElementById('edit_piloto_id').value;
+            if (!id) { mostrarAlerta('Primero guarda el piloto', 'warning'); return; }
+            const preview = document.getElementById('uploadPreviewEditarPiloto');
+            const previewImg = document.getElementById('uploadPreviewImgEditarPiloto');
+            const progress = document.getElementById('uploadProgressEditarPiloto');
+            const urlInput = document.getElementById('edit_piloto_foto');
+            const reader = new FileReader();
+            reader.onload = (e) => { previewImg.src = e.target.result; preview.style.display = 'block'; };
+            reader.readAsDataURL(file);
+            try {
+                await subirImagen('piloto', file, id, preview, progress, urlInput);
+                mostrarAlerta('Imagen subida', 'success');
+            } catch (error) { mostrarAlerta('Error al subir', 'error'); }
+        });
+    }
+
+    const uploadAreaEditarAeronave = document.getElementById('uploadAreaEditarAeronave');
+    const fotoArchivoEditarAeronave = document.getElementById('fotoArchivoEditarAeronave');
+    if (uploadAreaEditarAeronave) {
+        uploadAreaEditarAeronave.addEventListener('click', () => fotoArchivoEditarAeronave.click());
+        fotoArchivoEditarAeronave.addEventListener('change', async function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const id = document.getElementById('edit_aeronave_id').value;
+            if (!id) { mostrarAlerta('Primero guarda la aeronave', 'warning'); return; }
+            const preview = document.getElementById('uploadPreviewEditarAeronave');
+            const previewImg = document.getElementById('uploadPreviewImgEditarAeronave');
+            const progress = document.getElementById('uploadProgressEditarAeronave');
+            const urlInput = document.getElementById('edit_aeronave_imagen');
+            const reader = new FileReader();
+            reader.onload = (e) => { previewImg.src = e.target.result; preview.style.display = 'block'; };
+            reader.readAsDataURL(file);
+            try {
+                await subirImagen('aeronave', file, id, preview, progress, urlInput);
+                mostrarAlerta('Imagen subida', 'success');
+            } catch (error) { mostrarAlerta('Error al subir', 'error'); }
+        });
+    }
+
+    // ============================================
+    // NAVEGACIÓN Y TABS
+    // ============================================
+    function showTab(tab) {
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+        document.getElementById(`tab-${tab}`).classList.add('active');
+        const botonActivo = Array.from(document.querySelectorAll('.tab-btn')).find(btn => btn.getAttribute('onclick')?.includes(`'${tab}'`));
+        if (botonActivo) botonActivo.classList.add('active');
+        if (tab === 'pilotos') cargarPilotos();
+        if (tab === 'aeronaves') cargarAeronaves();
+        if (tab === 'rangos') cargarRangosAdmin();
+    }
+
+    function cerrarSesion() { localStorage.clear(); window.location.href = 'index.html'; }
+    function toggleMobileMenu() { document.getElementById('sidebar').classList.toggle('mobile-open'); }
+    function toggleProfileDropdown() { document.getElementById('profileDropdown').classList.toggle('show'); }
+
+    document.addEventListener('click', (e) => {
+        const btn = document.getElementById('profileBtn');
+        const dd = document.getElementById('profileDropdown');
+        if (!btn.contains(e.target) && !dd.contains(e.target)) dd.classList.remove('show');
+    });
+
+    async function editarMiPerfil() {
+        const token = localStorage.getItem('token');
+        const id = pilotoActual.id;
+        const res = await fetch(`${API_BASE_URL}/api/admin/pilotos/${id}`, { headers: { 'Authorization': `Bearer ${token}` } });
+        const data = await res.json();
+        const p = data.piloto;
+        document.getElementById('edit_piloto_id').value = p.id;
+        document.getElementById('edit_piloto_nombre').value = p.nombre_completo;
+        document.getElementById('edit_piloto_email').value = p.email;
+        document.getElementById('edit_piloto_foto').value = p.foto_url || '';
+        document.getElementById('modalEditarPiloto').style.display = 'flex';
+    }
+
+    document.getElementById('menuToggle').addEventListener('click', toggleMobileMenu);
+    document.getElementById('profileBtn').addEventListener('click', toggleProfileDropdown);
+    document.getElementById('miPerfilBtn').addEventListener('click', editarMiPerfil);
+    document.getElementById('cerrarSesionBtn').addEventListener('click', cerrarSesion);
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            cerrarModalPiloto(); cerrarModalEditarPiloto();
+            cerrarModalAeronave(); cerrarModalEditarAeronave();
+            cerrarModalPassword();
+        }
+    });
+
+    // ============================================
+    // INICIALIZACIÓN
+    // ============================================
+    async function init() {
+        if (!verificarAcceso()) return;
+        if (pilotoActual.rol === 'Admin') {
+            await cargarRangos();
+            await cargarStats();
+            await cargarPilotos();
+            await cargarAeronaves();
+        } else if (pilotoActual.rol === 'Supervisor') {
+            await cargarPilotos();
+        }
+        setInterval(verificarRolPeriodicamente, 10000);
+    }
+
+    init();
+</script>
 </body>
 </html>
