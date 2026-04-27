@@ -201,7 +201,7 @@ router.put('/rangos', verificarToken, esAdminOnly, async (req, res) => {
     console.error('Error al guardar rangos:', error);
     res.status(500).json({ error: error.message });
   }
-});
+}); 
 
 router.post('/rangos', verificarToken, esAdminOnly, async (req, res) => {
   try {
