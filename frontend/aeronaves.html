@@ -519,7 +519,7 @@ mostrarAlerta('Error al actualizar rol', 'error');
             container.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-pulse"></i><br>Cargando aeronaves...</div>';
             
             try {
-                const response = await fetch('/api/admin/aeronaves', {
+                const response = await fetch(`${API_BASE_URL}/api/aeronaves`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 
