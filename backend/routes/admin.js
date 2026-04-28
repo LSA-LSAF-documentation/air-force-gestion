@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const pool = require('../config/supabase'); // ✅ Supabase/PostgreSQL
+const { pool, supabase } = require('../config/supabase'); // ✅ Supabase/PostgreSQL
 const bcrypt = require('bcryptjs');
 const { verificarToken } = require('./auth');
 const multer = require('multer');
@@ -88,61 +88,114 @@ const upload = multer({
 });
 
 // ============================================
-// ENDPOINTS DE UPLOAD
+// ENDPOINTS DE UPLOAD (SUPABASE STORAGE)
 // ============================================
 
-router.post('/upload/piloto/:id', verificarToken, esAdmin, upload.single('imagen'), async (req, res) => {
+// Subir imagen de piloto, aeronave o rango
+router.post('/upload/:carpeta/:id', verificarToken, esAdmin, upload.single('imagen'), async (req, res) => {
   try {
-    const { id } = req.params;
-    if (!req.file) return res.status(400).json({ error: 'No se recibió ninguna imagen' });
+    const { carpeta, id } = req.params;
+    const file = req.file;
     
-    const fileUrl = `/uploads/pilotos/${req.file.filename}`;
-    await pool.query("UPDATE pilotos SET foto_url = $1 WHERE id = $2", [fileUrl, id]);
-    res.json({ success: true, url: fileUrl });
+    if (!file) return res.status(400).json({ error: 'No se recibió ninguna imagen' });
+
+    const fileName = `${Date.now()}-${Math.round(Math.random() * 1E9)}${path.extname(file.originalname)}`;
+    const filePath = `${carpeta}/${fileName}`;
+    
+    // Subir a Supabase Storage
+    const { data, error } = await supabase.storage
+      .from('imagenes')
+      .upload(filePath, file.buffer, {
+        contentType: file.mimetype,
+        upsert: true
+      });
+
+    if (error) throw error;
+
+    // Obtener URL pública
+    const { data: publicUrl } = supabase.storage
+      .from('imagenes')
+      .getPublicUrl(filePath);
+
+    const url = publicUrl.publicUrl;
+
+    // Actualizar en la base de datos según la carpeta
+    if (carpeta === 'pilotos') {
+      await pool.query("UPDATE pilotos SET foto_url = $1 WHERE id = $2", [url, id]);
+    } else if (carpeta === 'aeronaves') {
+      await pool.query("UPDATE aeronaves SET imagen_url = $1 WHERE id = $2", [url, id]);
+    } else if (carpeta === 'ranks') {
+      await pool.query("UPDATE rangos SET logo_url = $1 WHERE id = $2", [url, id]);
+    }
+
+    res.json({ success: true, url });
   } catch (error) {
-    console.error('Error al subir foto:', error);
+    console.error('Error al subir:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
-router.post('/upload/aeronave/:id', verificarToken, esAdmin, upload.single('imagen'), async (req, res) => {
+// Subir una imagen de observación
+router.post('/upload/observacion', verificarToken, upload.single('imagen'), async (req, res) => {
   try {
-    const { id } = req.params;
-    if (!req.file) return res.status(400).json({ error: 'No se recibió ninguna imagen' });
+    const file = req.file;
+    if (!file) return res.status(400).json({ error: 'No se recibió ninguna imagen' });
+
+    const fileName = `${Date.now()}-${Math.round(Math.random() * 1E9)}${path.extname(file.originalname)}`;
+    const filePath = `observaciones/${fileName}`;
     
-    const fileUrl = `/uploads/aeronaves/${req.file.filename}`;
-    await pool.query("UPDATE aeronaves SET imagen_url = $1 WHERE id = $2", [fileUrl, id]);
-    res.json({ success: true, url: fileUrl });
+    const { data, error } = await supabase.storage
+      .from('imagenes')
+      .upload(filePath, file.buffer, {
+        contentType: file.mimetype,
+        upsert: true
+      });
+
+    if (error) throw error;
+
+    const { data: publicUrl } = supabase.storage
+      .from('imagenes')
+      .getPublicUrl(filePath);
+
+    res.json({ success: true, url: publicUrl.publicUrl });
   } catch (error) {
-    console.error('Error al subir imagen:', error);
+    console.error('Error al subir:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
-router.post('/upload/rango/:id', verificarToken, esAdmin, upload.single('imagen'), async (req, res) => {
+// Subir múltiples imágenes de observación
+router.post('/upload/observaciones', verificarToken, upload.array('imagenes', 10), async (req, res) => {
   try {
-    const { id } = req.params;
-    if (!req.file) return res.status(400).json({ error: 'No se recibió ninguna imagen' });
+    if (!req.files || req.files.length === 0) return res.status(400).json({ error: 'No se recibieron imágenes' });
+
+    const urls = [];
     
-    const fileUrl = `/uploads/ranks/${req.file.filename}`;
-    await pool.query("UPDATE rangos SET logo_url = $1 WHERE id = $2", [fileUrl, id]);
-    res.json({ success: true, url: fileUrl });
+    for (const file of req.files) {
+      const fileName = `${Date.now()}-${Math.round(Math.random() * 1E9)}${path.extname(file.originalname)}`;
+      const filePath = `observaciones/${fileName}`;
+      
+      const { data, error } = await supabase.storage
+        .from('imagenes')
+        .upload(filePath, file.buffer, {
+          contentType: file.mimetype,
+          upsert: true
+        });
+
+      if (error) throw error;
+
+      const { data: publicUrl } = supabase.storage
+        .from('imagenes')
+        .getPublicUrl(filePath);
+
+      urls.push(publicUrl.publicUrl);
+    }
+
+    res.json({ success: true, urls });
   } catch (error) {
-    console.error('Error al subir logo:', error);
+    console.error('Error al subir:', error);
     res.status(500).json({ error: error.message });
   }
-});
-
-router.post('/upload/observacion', verificarToken, upload.single('imagen'), (req, res) => {
-  if (!req.file) return res.status(400).json({ error: 'No se recibió ninguna imagen' });
-  const fileUrl = `/uploads/observaciones/${req.file.filename}`;
-  res.json({ success: true, url: fileUrl });
-});
-
-router.post('/upload/observaciones', verificarToken, upload.array('imagenes', 10), (req, res) => {
-  if (!req.files || req.files.length === 0) return res.status(400).json({ error: 'No se recibieron imágenes' });
-  const urls = req.files.map(file => `/uploads/observaciones/${file.filename}`);
-  res.json({ success: true, urls });
 });
 
 // ============================================

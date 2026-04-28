@@ -12,7 +12,7 @@ const fs = require('fs');
 dotenv.config();
 
 // Importar base de datos (Supabase/PostgreSQL)
-const pool = require('./config/supabase');
+const { pool } = require('./config/supabase');
 
 // Importar rutas
 const authRoutes = require('./routes/auth');

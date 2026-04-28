@@ -2,7 +2,7 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const router = express.Router();
-const pool = require('../config/supabase'); // ✅ Cambiado a Supabase
+const { pool } = require('../config/supabase'); // ✅ Cambiado a Supabase
 
 router.post('/login', async (req, res) => { // ✅ Agregado async
   const { email, password } = req.body;

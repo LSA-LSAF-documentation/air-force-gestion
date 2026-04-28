@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const pool = require('../config/supabase');
+const { pool } = require('../config/supabase');
 const { verificarToken } = require('./auth');
 
 // Obtener todas las aeronaves (todos los autenticados pueden ver)
