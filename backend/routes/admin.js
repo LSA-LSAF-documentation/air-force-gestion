@@ -58,24 +58,7 @@ if (!fs.existsSync(observacionesDir)) fs.mkdirSync(observacionesDir, { recursive
 
 console.log('📁 Carpetas de uploads verificadas');
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const url = req.originalUrl;
-    let destino;
-    if (url.includes('piloto')) destino = pilotosDir;
-    else if (url.includes('aeronave')) destino = aeronavesDir;
-    else if (url.includes('rango')) destino = ranksDir;
-    else if (url.includes('observacion')) destino = observacionesDir;
-    else destino = uploadsDir;
-
-    if (!fs.existsSync(destino)) fs.mkdirSync(destino, { recursive: true });
-    cb(null, destino);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
-  }
-});
+const storage = multer.memoryStorage();
 
 const upload = multer({ 
   storage,
