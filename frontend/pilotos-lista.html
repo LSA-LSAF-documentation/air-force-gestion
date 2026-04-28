@@ -599,7 +599,10 @@
         const response = await fetch(`/api/pilotos/${pilotoId}/horas-vuelo`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
-        if (!response.ok) return 'Error al cargar';
+        if (!response.ok) {
+    if (response.status === 403) return '🔒 Solo visible para Instructores y Admin';
+    return 'Error al cargar';
+}
         const data = await response.json();
         if (!data.horas || data.horas.length === 0) return 'No hay horas registradas';
         
