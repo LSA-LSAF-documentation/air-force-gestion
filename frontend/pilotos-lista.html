@@ -622,11 +622,11 @@
         }
         
         let totalGeneral = 0;
-        data.horas.forEach(h => { totalGeneral += h.horas_totales || 0; });
+data.horas.forEach(h => { totalGeneral += Number(h.horas_totales) || 0; });
         
         let html = `<div class="horas-container"><div class="horas-item" style="font-weight:bold; border-bottom:2px solid var(--af-sky); margin-bottom:5px;"><strong>✈️ TOTAL: ${totalGeneral.toFixed(1)} horas</strong></div>`;
         data.horas.forEach(h => {
-            html += `<div class="horas-item"><strong>${h.modelo}:</strong> ${(h.horas_totales || 0).toFixed(1)} hrs (${h.numero_vuelos} vuelos)</div>`;
+            html += `<div class="horas-item"><strong>${h.modelo}:</strong> ${Number(h.horas_totales || 0).toFixed(1)} hrs (${h.numero_vuelos} vuelos)</div>`;
         });
         html += '</div>';
         console.log('🟢 HTML generado:', html.substring(0, 50) + '...');
