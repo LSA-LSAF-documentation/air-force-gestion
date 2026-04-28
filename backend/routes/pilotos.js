@@ -62,9 +62,9 @@ router.get('/:id/horas-vuelo', verificarToken, async (req, res) => {
     const usuarioId = req.piloto.id;
     const usuarioRol = req.piloto.rol;
     
-    if (usuarioId !== id && usuarioRol === 'Piloto') {
-      return res.status(403).json({ error: 'Acceso denegado' });
-    }
+    if (usuarioRol === 'Piloto' && usuarioId !== id) {
+    return res.status(403).json({ error: 'Acceso denegado' });
+}
     
     // Nota: PostgreSQL usa EXTRACT(EPOCH FROM ...) en lugar de strftime
     const query = `
