@@ -669,6 +669,7 @@
         // MODAL DETALLE
         // ============================================
         async function verDetalle(id) {
+            console.log('🔍 verDetalle llamado con ID:', id);
             const piloto = todosLosPilotos.find(p => p.id === id);
             if (!piloto) return;
             
