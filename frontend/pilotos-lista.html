@@ -460,7 +460,9 @@
             
             if (pilotoActual.foto_url && pilotoActual.foto_url !== '') {
                 let fotoUrl = pilotoActual.foto_url;
-                if (!fotoUrl.startsWith('http')) fotoUrl = `${API_BASE_URL}${fotoUrl}`;
+                if (!fotoUrl.startsWith('http')) {
+    fotoUrl = `${API_BASE_URL}${fotoUrl}`;
+}
                 avatarImg.style.display = 'block';
                 avatarTexto.style.display = 'none';
                 avatarImg.src = fotoUrl;

@@ -1473,7 +1473,9 @@ async function degradarPiloto(id) {
     }
     
     tbody.innerHTML = rangosEditables.map((r, index) => {
-        const logoUrl = r.logo_url ? r.logo_url : null;
+        const logoUrl = r.logo_url 
+    ? (r.logo_url.startsWith('http') ? r.logo_url : `${API_BASE_URL}${r.logo_url}`) 
+    : null;
         const logoHtml = logoUrl 
             ? `<img src="${logoUrl}" class="rango-logo-tabla" onerror="this.style.display='none';">`
             : `<div style="width: 40px; height: 40px; background: var(--af-gray); border-radius: 5px; display: flex; align-items: center; justify-content: center;"><i class="fas fa-image"></i></div>`;
