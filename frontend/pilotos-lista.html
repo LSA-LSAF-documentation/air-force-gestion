@@ -458,11 +458,11 @@
             const avatarImg = document.getElementById('avatarImg');
             const avatarTexto = document.getElementById('avatarTexto');
             
-            if (pilotoActual.foto_url && pilotoActual.foto_url !== '') {
-                let fotoUrl = pilotoActual.foto_url;
-                if (!fotoUrl.startsWith('http')) {
-    fotoUrl = `${API_BASE_URL}${fotoUrl}`;
-}
+             if (pilotoActual.foto_url && pilotoActual.foto_url !== '') {
+    let fotoUrl = pilotoActual.foto_url;
+    if (!fotoUrl.startsWith('http')) {
+        fotoUrl = `${API_BASE_URL}${fotoUrl}`;
+    }
                 avatarImg.style.display = 'block';
                 avatarTexto.style.display = 'none';
                 avatarImg.src = fotoUrl;
@@ -558,7 +558,9 @@
             const iniciales = (piloto.nombre_completo || '').split(' ').map(n => n[0]).join('').substring(0, 2);
             const nombreRango = getRangoNombre(piloto.grado_code);
             const tieneFoto = piloto.foto_url && piloto.foto_url.trim() !== '';
-            const fotoUrl = tieneFoto ? `${API_BASE_URL}${piloto.foto_url}` : null;
+            const fotoUrl = tieneFoto 
+    ? (piloto.foto_url.startsWith('http') ? piloto.foto_url : `${API_BASE_URL}${piloto.foto_url}`) 
+    : null;
             
             return `
                 <div class="piloto-card" onclick="verDetalle('${piloto.id}')">
@@ -679,7 +681,9 @@
             if (piloto.foto_url && piloto.foto_url !== '') {
                 modalAvatar.style.display = 'block';
                 modalAvatarIniciales.style.display = 'none';
-                modalAvatar.src = `${API_BASE_URL}${piloto.foto_url}`;
+                modalAvatar.src = piloto.foto_url.startsWith('http') 
+    ? piloto.foto_url 
+    : `${API_BASE_URL}${piloto.foto_url}`;
                 modalAvatar.onerror = () => {
                     modalAvatar.style.display = 'none';
                     modalAvatarIniciales.style.display = 'flex';
