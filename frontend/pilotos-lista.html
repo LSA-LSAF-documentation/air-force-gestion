@@ -595,44 +595,24 @@
         // ============================================
         async function cargarHorasVuelo(pilotoId) {
     const token = localStorage.getItem('token');
-    console.log('🟢 cargarHorasVuelo INICIO - pilotoId:', pilotoId);
-    console.log('🟢 Token existe:', !!token);
-    
     try {
-        const url = `/api/pilotos/${pilotoId}/horas-vuelo`;
-        console.log('🟢 URL:', url);
-        
-        const response = await fetch(url, {
+        const response = await fetch(`/api/pilotos/${pilotoId}/horas-vuelo`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
-        
-        console.log('🟡 Status:', response.status, 'OK:', response.ok);
-        
-        if (!response.ok) {
-            console.error('🔴 Response no OK');
-            return 'Error al cargar';
-        }
-        
+        if (!response.ok) return 'Error al cargar';
         const data = await response.json();
-        console.log('🟢 Data recibida:', data);
-        
-        if (!data.horas || data.horas.length === 0) {
-            console.log('🟡 No hay horas registradas');
-            return 'No hay horas registradas';
-        }
+        if (!data.horas || data.horas.length === 0) return 'No hay horas registradas';
         
         let totalGeneral = 0;
-data.horas.forEach(h => { totalGeneral += Number(h.horas_totales) || 0; });
+        data.horas.forEach(h => { totalGeneral += Number(h.horas_totales) || 0; });
         
         let html = `<div class="horas-container"><div class="horas-item" style="font-weight:bold; border-bottom:2px solid var(--af-sky); margin-bottom:5px;"><strong>✈️ TOTAL: ${totalGeneral.toFixed(1)} horas</strong></div>`;
         data.horas.forEach(h => {
             html += `<div class="horas-item"><strong>${h.modelo}:</strong> ${Number(h.horas_totales || 0).toFixed(1)} hrs (${h.numero_vuelos} vuelos)</div>`;
         });
         html += '</div>';
-        console.log('🟢 HTML generado:', html.substring(0, 50) + '...');
         return html;
     } catch (error) {
-        console.error('🔴 ERROR:', error.message);
         return 'Error al cargar';
     }
 }
