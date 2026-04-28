@@ -68,7 +68,7 @@ const upload = multer({
     if (allowedTypes.includes(file.mimetype)) cb(null, true);
     else cb(new Error('Solo se permiten imágenes'));
   }
-});
+}); 
 
 // ============================================
 // ENDPOINTS DE UPLOAD (SUPABASE STORAGE)
