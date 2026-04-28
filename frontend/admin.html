@@ -1458,24 +1458,27 @@ async function degradarPiloto(id) {
         // CRUD RANGOS
         // ============================================
         
-      async function cargarRangosAdmin() {
+        async function cargarRangosAdmin() {
+    // No cargar desde el servidor, usar rangosEditables directamente
     const tbody = document.querySelector('#tablaRangos tbody');
     
-    // ✅ Siempre cargar desde el servidor para tener datos frescos
-    const token = localStorage.getItem('token');
-    const res = await fetch('/api/admin/rangos', {
-        headers: { 'Authorization': `Bearer ${token}` }
-    });
-    const data = await res.json();
-    rangosEditables = data.ranks || [];
+    if (!rangosEditables || rangosEditables.length === 0) {
+        // Solo cargar desde servidor si está vacío
+        const token = localStorage.getItem('token');
+        const res = await fetch('/api/admin/rangos', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        rangosEditables = data.ranks || [];
+    }
     
     tbody.innerHTML = rangosEditables.map((r, index) => {
         const logoUrl = r.logo_url 
-            ? (r.logo_url.startsWith('http') ? r.logo_url : `${API_BASE_URL}${r.logo_url}`) 
-            : null;
-        const logoHtml = logoUrl 
-            ? `<img src="${logoUrl}" class="rango-logo-tabla" onerror="this.style.display='none';">`
-            : `<div style="width: 40px; height: 40px; background: var(--af-gray); border-radius: 5px; display: flex; align-items: center; justify-content: center;"><i class="fas fa-image"></i></div>`;
+    ? (r.logo_url.startsWith('http') ? r.logo_url : `${API_BASE_URL}${r.logo_url}`) 
+    : null;
+const logoHtml = logoUrl 
+    ? `<img src="${logoUrl}" class="rango-logo-tabla" onerror="this.style.display='none';">`
+    : `<div style="width: 40px; height: 40px; background: var(--af-gray); border-radius: 5px; display: flex; align-items: center; justify-content: center;"><i class="fas fa-image"></i></div>`;
         
         return `
             <tr>
