@@ -679,6 +679,7 @@ function mostrarAlerta(mensaje, tipo = 'info') {
                                 </div>
                             ` : ''}
                             ${acciones}
+                            ${pilotoActual.rol === 'Admin' ? `<div class="acciones-solicitud"><button class="btn-rechazar" onclick="event.stopPropagation(); eliminarSolicitud(${solicitud.id})"><i class="fas fa-trash"></i> Eliminar</button></div>` : ''}
                         </div>
                     `;
                 }).join('');
@@ -827,6 +828,26 @@ function mostrarAlerta(mensaje, tipo = 'info') {
                 mostrarAlerta('Error al enviar la solicitud', 'error');
             }
         });
+        async function eliminarSolicitud(id) {
+    if (!confirm('¿Eliminar esta solicitud permanentemente?')) return;
+    const token = localStorage.getItem('token');
+    try {
+        const res = await fetch(`/api/solicitudes/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+            mostrarAlerta('✅ Solicitud eliminada', 'success');
+            cargarSolicitudes();
+        } else {
+            mostrarAlerta('❌ Error al eliminar', 'error');
+        }
+    } catch (error) {
+        mostrarAlerta('❌ Error de conexión', 'error');
+    }
+}
+
+
         
         function cerrarSesion() {
             localStorage.removeItem('token');

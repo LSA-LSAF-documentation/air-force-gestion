@@ -208,5 +208,17 @@ router.put('/:id', verificarToken, esInstructorOAdmin, async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+// Eliminar solicitud (solo Admin)
+router.delete('/:id', verificarToken, async (req, res) => {
+  try {
+    if (req.piloto.rol !== 'Admin') {
+      return res.status(403).json({ error: 'Solo administradores' });
+    }
+    await pool.query("DELETE FROM solicitudes WHERE id = $1", [req.params.id]);
+    res.json({ success: true, mensaje: 'Solicitud eliminada' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
 module.exports = router;
