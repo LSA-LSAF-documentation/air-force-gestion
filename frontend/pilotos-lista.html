@@ -596,7 +596,7 @@
         async function cargarHorasVuelo(pilotoId) {
             const token = localStorage.getItem('token');
             try {
-                const response = await fetch(`${API_BASE_URL}/api/pilotos/${pilotoId}/horas-vuelo`, {
+                const response = await fetch(`/api/pilotos/${pilotoId}/horas-vuelo`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 if (!response.ok) return 'Error al cargar';
